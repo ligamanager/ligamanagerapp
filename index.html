@@ -1,1 +1,119 @@
 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liga Manager - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SDK do Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+
+  <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 w-full max-w-md shadow-2xl">
+    <h1 class="text-2xl font-bold text-center mb-6 text-emerald-400">Liga Manager</h1>
+    
+    <form id="authForm" class="space-y-4">
+      <div>
+        <label class="block text-sm text-slate-400 mb-1">E-mail</label>
+        <input type="email" id="email" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-sm text-slate-400 mb-1">Palavra-passe</label>
+        <input type="password" id="password" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-sm text-slate-400 mb-1">Nome de Utilizador</label>
+        <input type="text" id="username" placeholder="ex: renan_mngr" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-sm text-slate-400 mb-1">Gamertag (PSN/Xbox/Steam)</label>
+        <input type="text" id="gamertag" placeholder="ex: Renan_Villa" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-500">
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button type="button" onclick="fazerLogin()" class="w-1/2 bg-slate-700 hover:bg-slate-600 font-semibold py-2.5 rounded-lg transition">Entrar</button>
+        <button type="button" onclick="cadastrar()" class="w-1/2 bg-emerald-600 hover:bg-emerald-500 font-semibold py-2.5 rounded-lg transition">Cadastrar</button>
+      </div>
+    </form>
+
+    <div id="mensagem" class="mt-4 text-center text-sm"></div>
+  </div>
+
+  <script>
+    // As tuas credenciais reais do Supabase
+    const SUPABASE_URL = 'https://rhymsnkxlieqzdruirdc.supabase.co';
+    const SUPABASE_KEY = 'Sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function cadastrar() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const username = document.getElementById('username').value;
+      const gamertag = document.getElementById('gamertag').value;
+      const msg = document.getElementById('mensagem');
+
+      if (!email || !password || !username) {
+        msg.className = "mt-4 text-center text-sm text-yellow-400";
+        msg.innerText = "Preencha o e-mail, palavra-passe e nome de utilizador.";
+        return;
+      }
+
+      msg.className = "mt-4 text-center text-sm text-slate-300";
+      msg.innerText = "A processar registo...";
+
+      const { data, error } = await supabase.auth.signUp({ email, password });
+
+      if (error) {
+        msg.className = "mt-4 text-center text-sm text-red-400";
+        msg.innerText = error.message;
+        return;
+      }
+
+      if (data.user) {
+        const { error: profileErr } = await supabase.from('profiles').insert([
+          { id: data.user.id, username, gamertag }
+        ]);
+
+        if (profileErr) {
+          msg.className = "mt-4 text-center text-sm text-yellow-400";
+          msg.innerText = "Conta criada, mas erro no perfil: " + profileErr.message;
+        } else {
+          msg.className = "mt-4 text-center text-sm text-emerald-400";
+          msg.innerText = "Conta criada com sucesso! Já pode fazer login.";
+        }
+      }
+    }
+
+    async function fazerLogin() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const msg = document.getElementById('mensagem');
+
+      if (!email || !password) {
+        msg.className = "mt-4 text-center text-sm text-yellow-400";
+        msg.innerText = "Insira o e-mail e a palavra-passe.";
+        return;
+      }
+
+      msg.className = "mt-4 text-center text-sm text-slate-300";
+      msg.innerText = "A autenticar...";
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        msg.className = "mt-4 text-center text-sm text-red-400";
+        msg.innerText = error.message;
+      } else {
+        msg.className = "mt-4 text-center text-sm text-emerald-400";
+        msg.innerText = "Login efetuado com sucesso!";
+        // Aqui podes redirecionar para a página principal da liga no futuro
+      }
+    }
+  </script>
+</body>
+</html>
