@@ -390,7 +390,6 @@
       const grid = document.getElementById('leaguesGrid');
       const addCard = document.getElementById('addLeagueCard');
       
-      // Limpa os cards de ligas anteriores mantendo apenas o botão de adicionar
       grid.innerHTML = '';
       grid.appendChild(addCard);
 
@@ -565,7 +564,7 @@
       document.getElementById('organizerPanelArea').classList.remove('flex');
       document.getElementById('organizerPanelArea').classList.add('hidden');
       document.getElementById('dashboardView').classList.remove('hidden');
-      loadUserLeagues(); // Atualiza a lista ao voltar
+      loadUserLeagues();
     }
 
     function switchTab(tabName) {
