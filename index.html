@@ -87,7 +87,10 @@
             msg.innerText = "Conta criada! Aviso no perfil: " + profileErr.message;
           } else {
             msg.className = "mt-4 text-center text-sm font-medium text-emerald-400";
-            msg.innerText = "Conta criada com sucesso!";
+            msg.innerText = "Conta criada com sucesso! Redirecionando...";
+            setTimeout(() => {
+              window.location.href = 'dashboard.html';
+            }, 1000);
           }
         }
       } catch (err) {
@@ -117,7 +120,12 @@
           msg.innerText = "Erro no login: " + error.message;
         } else {
           msg.className = "mt-4 text-center text-sm font-medium text-emerald-400";
-          msg.innerText = "Login efetuado com sucesso!";
+          msg.innerText = "Login efetuado com sucesso! Entrando no painel...";
+          
+          // Redireciona para o dashboard após 1 segundo
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 1000);
         }
       } catch (err) {
         msg.className = "mt-4 text-center text-sm font-medium text-red-400";
