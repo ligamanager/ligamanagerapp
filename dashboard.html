@@ -267,10 +267,11 @@
         <p class="text-xs text-slate-400 mt-1">Cole o código da liga fornecido pelo admin</p>
       </div>
 
-      <form onsubmit="event.preventDefault(); closeModal('joinLeagueModal');" class="space-y-4">
+      <form onsubmit="handleJoinLeague(event)" class="space-y-4">
         <div>
-          <input type="text" placeholder="Ex: LIGA-892A" class="w-full text-center tracking-widest font-mono text-lg uppercase px-4 py-3.5 rounded-xl border border-slate-800 bg-slate-950 text-white focus:outline-none focus:border-[#25A6FF]" required />
+          <input type="text" id="joinCodeInput" placeholder="Ex: LIGA-2657" class="w-full text-center tracking-widest font-mono text-lg uppercase px-4 py-3.5 rounded-xl border border-slate-800 bg-slate-950 text-white focus:outline-none focus:border-[#25A6FF]" required />
         </div>
+        <div id="joinModalMsg" class="text-center text-xs font-semibold min-h-[1rem]"></div>
         <button type="submit" class="w-full bg-[#25A6FF] text-white font-bold py-3.5 rounded-xl text-sm shadow-lg shadow-[#25A6FF]/25">
           Acessar Liga
         </button>
@@ -482,6 +483,45 @@
       await loadUserLeagues();
     }
 
+    // --- ENTRAR NA LIGA PELO CÓDIGO ---
+    async function handleJoinLeague(event) {
+      event.preventDefault();
+      const codeInput = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+      const cleanCode = codeInput.replace('#', '');
+      const msgEl = document.getElementById('joinModalMsg');
+
+      msgEl.className = "text-center text-xs font-semibold text-[#25A6FF]";
+      msgEl.innerText = "🔍 Buscando liga...";
+
+      const { data, error } = await supabaseClient
+        .from('leagues')
+        .select('*')
+        .eq('code', cleanCode)
+        .single();
+
+      if (error || !data) {
+        msgEl.className = "text-center text-xs font-semibold text-rose-400";
+        msgEl.innerText = "❌ Liga não encontrada com este código.";
+        return;
+      }
+
+      msgEl.className = "text-center text-xs font-semibold text-emerald-400";
+      msgEl.innerText = "⚽ Entrando na liga!";
+
+      setTimeout(() => {
+        closeModal('joinLeagueModal');
+        document.getElementById('joinCodeInput').value = '';
+        msgEl.innerText = '';
+        openOrganizerPanelByData(data);
+      }, 800);
+    }
+
+    function openOrganizerPanelByData(leagueData) {
+      currentLeagueData = leagueData;
+      currentLeagueData.isOrganizer = (currentLeagueData.owner_id === currentUser.id);
+      setupPanelUI();
+    }
+
     // --- ABRIR PAINEL DA LIGA ---
     function openOrganizerPanelById(leagueId) {
       currentLeagueData = userLeagues.find(l => l.id === leagueId);
@@ -504,6 +544,11 @@
         badge.className = 'bg-[#25A6FF]/15 text-[#25A6FF] text-[10px] font-extrabold px-2 py-0.5 rounded uppercase border border-[#25A6FF]/30';
         teamsTab.classList.remove('hidden');
         if (noticeText) noticeText.innerText = 'Insira os gols e clique em Salvar para atualizar a tabela';
+      } else {
+        badge.innerText = 'Participante';
+        badge.className = 'bg-amber-500/15 text-amber-400 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase border border-amber-500/30';
+        teamsTab.classList.add('hidden');
+        if (noticeText) noticeText.innerText = 'Modo visualização: acompanhe os jogos e a classificação em tempo real.';
       }
 
       document.getElementById('dashboardView').classList.add('hidden');
@@ -608,17 +653,37 @@
       currentLeagueData.matches.forEach(m => {
         const card = document.createElement('div');
         card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3";
+        
+        let actionHTML = '';
+        if (currentLeagueData.isOrganizer) {
+          actionHTML = `
+            <div class="flex items-center gap-2">
+              <input type="number" id="match-hg-${m.id}" value="${m.homeGoals !== null ? m.homeGoals : ''}" placeholder="0" min="0" class="w-12 h-10 text-center bg-slate-950 border border-slate-800 text-white font-bold rounded-xl focus:border-[#25A6FF] focus:outline-none" />
+              <span class="text-xs text-slate-500 font-bold">X</span>
+              <input type="number" id="match-ag-${m.id}" value="${m.awayGoals !== null ? m.awayGoals : ''}" placeholder="0" min="0" class="w-12 h-10 text-center bg-slate-950 border border-slate-800 text-white font-bold rounded-xl focus:border-[#25A6FF] focus:outline-none" />
+            </div>
+            <span class="text-xs font-bold text-white w-28 text-left truncate">${m.away}</span>
+            <button onclick="saveMatchResult(${m.id})" class="bg-[#25A6FF]/10 hover:bg-[#25A6FF] text-[#25A6FF] hover:text-white border border-[#25A6FF]/30 font-bold px-3 py-2 rounded-xl text-xs transition">
+              Salvar
+            </button>
+          `;
+        } else {
+          actionHTML = `
+            <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl">
+              <span class="w-6 text-center font-bold text-white">${m.homeGoals !== null ? m.homeGoals : '-'}</span>
+              <span class="text-xs text-slate-500 font-bold">X</span>
+              <span class="w-6 text-center font-bold text-white">${m.awayGoals !== null ? m.awayGoals : '-'}</span>
+            </div>
+            <span class="text-xs font-bold text-white w-28 text-left truncate">${m.away}</span>
+            <span class="text-[10px] font-bold px-2.5 py-1 rounded-lg ${m.played ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'}">
+              ${m.played ? 'Encerrado' : 'Agendado'}
+            </span>
+          `;
+        }
+
         card.innerHTML = `
           <span class="text-xs font-bold text-white w-28 text-right truncate">${m.home}</span>
-          <div class="flex items-center gap-2">
-            <input type="number" id="match-hg-${m.id}" value="${m.homeGoals !== null ? m.homeGoals : ''}" placeholder="0" min="0" class="w-12 h-10 text-center bg-slate-950 border border-slate-800 text-white font-bold rounded-xl focus:border-[#25A6FF] focus:outline-none" />
-            <span class="text-xs text-slate-500 font-bold">X</span>
-            <input type="number" id="match-ag-${m.id}" value="${m.awayGoals !== null ? m.awayGoals : ''}" placeholder="0" min="0" class="w-12 h-10 text-center bg-slate-950 border border-slate-800 text-white font-bold rounded-xl focus:border-[#25A6FF] focus:outline-none" />
-          </div>
-          <span class="text-xs font-bold text-white w-28 text-left truncate">${m.away}</span>
-          <button onclick="saveMatchResult(${m.id})" class="bg-[#25A6FF]/10 hover:bg-[#25A6FF] text-[#25A6FF] hover:text-white border border-[#25A6FF]/30 font-bold px-3 py-2 rounded-xl text-xs transition">
-            Salvar
-          </button>
+          ${actionHTML}
         `;
         container.appendChild(card);
       });
