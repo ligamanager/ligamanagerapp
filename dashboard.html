@@ -1,1 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liga Manager - Painel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4">
+
+  <div class="max-w-4xl mx-auto space-y-6">
+    <!-- Cabeçalho -->
+    <header class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center shadow-lg">
+      <h1 class="text-xl font-bold text-emerald-400">Liga Manager</h1>
+      <button onclick="terminarSessao()" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-semibold transition">Sair</button>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg space-y-4">
+      <h2 class="text-2xl font-bold">Bem-vindo ao Painel!</h2>
+      <p class="text-slate-400 text-sm">Aqui vais gerir os torneios, as tabelas de classificação e os jogos da liga.</p>
+      
+      <div id="userInfo" class="bg-slate-900 p-4 rounded-lg border border-slate-700 text-sm text-slate-300">
+        A carregar dados do utilizador...
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://rhymsnkxlieqzdruirdc.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function verificarSessao() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      if (!session) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const user = session.user;
+      document.getElementById('userInfo').innerHTML = `
+        <p><strong>E-mail:</strong> ${user.email}</p>
+        <p><strong>ID de Utilizador:</strong> ${user.id}</p>
+      `;
+    }
+
+    async function terminarSessao() {
+      await supabaseClient.auth.signOut();
+      window.location.href = 'index.html';
+    }
+
+    verificarSessao();
+  </script>
+</body>
+</html>
 
