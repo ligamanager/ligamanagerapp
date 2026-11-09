@@ -72,7 +72,7 @@
     <!-- Conteúdo Principal do Dashboard -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-      <!-- Boas-vindas & Banner de Ação Rápida -->
+      <!-- Boas-vindas -->
       <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900 to-[#25A6FF]/20 border border-slate-800 p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-2xl">
         <div class="space-y-2 max-w-xl z-10">
           <h1 id="welcomeText" class="text-2xl sm:text-3xl font-black text-white">Bem-vindo de volta! 👋</h1>
@@ -83,10 +83,6 @@
           <button onclick="openModal('createLeagueModal')" class="flex-1 md:flex-none bg-[#25A6FF] hover:bg-[#1A91E6] text-white font-extrabold px-5 py-3 rounded-xl transition text-sm shadow-lg shadow-[#25A6FF]/30 flex items-center justify-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
             <span>Criar Nova Liga</span>
-          </button>
-
-          <button onclick="openModal('joinLeagueModal')" class="flex-1 md:flex-none sm:hidden bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold px-4 py-3 rounded-xl text-sm transition text-center">
-            Inserir Código
           </button>
         </div>
 
@@ -159,7 +155,6 @@
     </header>
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      <!-- Navegação das Abas -->
       <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
         <button id="tabBtn-standings" onclick="switchTab('standings')" class="bg-[#25A6FF] text-white font-bold px-4 py-2 rounded-xl text-xs transition">
           📊 Tabela
@@ -172,7 +167,6 @@
         </button>
       </div>
 
-      <!-- Conteúdo da Aba Classificação -->
       <div id="tabContent-standings" class="space-y-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div class="overflow-x-auto">
@@ -191,20 +185,17 @@
                   <th class="p-4 text-center">SG</th>
                 </tr>
               </thead>
-              <tbody id="standingsTableBody" class="divide-y divide-slate-800/50">
-              </tbody>
+              <tbody id="standingsTableBody" class="divide-y divide-slate-800/50"></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Conteúdo da Aba Jogos -->
       <div id="tabContent-matches" class="hidden space-y-4">
         <p id="matchesNoticeText" class="text-xs text-slate-400"></p>
         <div id="matchesList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
       </div>
 
-      <!-- Conteúdo da Aba Equipes -->
       <div id="tabContent-teams" class="hidden space-y-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 max-w-lg">
           <h3 class="text-sm font-bold text-white">Editar Nomes das Equipes</h3>
@@ -260,7 +251,7 @@
 
         <div class="pt-2 flex items-center gap-3">
           <button type="button" onclick="closeModal('createLeagueModal')" class="flex-1 bg-slate-800 text-slate-300 font-bold py-3 rounded-xl text-xs">Cancelar</button>
-          <button type="submit" class="flex-1 bg-[#25A6FF] text-white font-bold py-3 rounded-xl shadow-lg shadow-[#25A6FF]/25 text-xs">Gerar Campeonato</button>
+          <button type="submit" id="btnCreateLeagueSubmit" class="flex-1 bg-[#25A6FF] text-white font-bold py-3 rounded-xl shadow-lg shadow-[#25A6FF]/25 text-xs">Gerar Campeonato</button>
         </div>
       </form>
     </div>
@@ -287,12 +278,11 @@
     </div>
   </div>
 
-  <!-- MODAL: PERFIL DO USUÁRIO & EDITAR CADASTRO (INTEGRADO AO SUPABASE) -->
+  <!-- MODAL: PERFIL DO USUÁRIO -->
   <div id="profileModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl relative">
       <button onclick="closeModal('profileModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl font-bold p-1">✕</button>
 
-      <!-- Cabeçalho do Perfil -->
       <div class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-800">
         <div class="w-14 h-14 rounded-2xl bg-[#25A6FF]/20 text-[#25A6FF] border-2 border-[#25A6FF] flex items-center justify-center shadow-lg shadow-[#25A6FF]/30">
           <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
@@ -304,7 +294,6 @@
         </div>
       </div>
 
-      <!-- Formulário do Perfil -->
       <form id="profileForm" class="space-y-4">
         <div>
           <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Nome de Usuário (@tag)</label>
@@ -339,9 +328,10 @@
 
     let currentUser = null;
     let userProfile = null;
-    let activeLeaguesCount = 0;
+    let userLeagues = [];
+    let currentLeagueData = null;
 
-    // --- CARREGAR SESSÃO & DADOS DO PERFIL ---
+    // --- CARREGAR SESSÃO & DADOS ---
     async function initDashboard() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       
@@ -352,11 +342,11 @@
 
       currentUser = session.user;
       await loadUserProfile();
+      await loadUserLeagues();
     }
 
     async function loadUserProfile() {
-      // Tenta buscar na tabela 'profiles'
-      const { data, error } = await supabaseClient
+      const { data } = await supabaseClient
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
@@ -365,105 +355,139 @@
       if (data) {
         userProfile = data;
       } else {
-        // Se ainda não existir a linha no BD, usa os metadados do cadastro
         const fallbackName = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
         userProfile = { username: fallbackName };
       }
 
-      updateUserUI();
-    }
-
-    function updateUserUI() {
       const username = userProfile.username || 'Jogador';
-      
-      // Atualizar Header & Banner
       document.getElementById('headerUsername').innerText = `@${username}`;
       document.getElementById('welcomeText').innerText = `Bem-vindo de volta, ${username}! 👋`;
-      
-      // Atualizar Modal de Perfil
       document.getElementById('modalUsernameTag').innerText = `@${username}`;
       document.getElementById('profileUsernameInput').value = username;
       document.getElementById('profileEmailInput').value = currentUser.email;
 
       if (currentUser.created_at) {
         const date = new Date(currentUser.created_at);
-        const monthYear = date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
-        document.getElementById('modalCreatedAt').innerText = `Membro desde ${monthYear}`;
+        document.getElementById('modalCreatedAt').innerText = `Membro desde ${date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}`;
       }
     }
 
-    // --- SALVAR ALTERAÇÕES DO PERFIL ---
-    document.getElementById('profileForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const newUsername = document.getElementById('profileUsernameInput').value.trim();
-      const msg = document.getElementById('profileMsg');
-      const btn = document.getElementById('btnSaveProfile');
+    async function loadUserLeagues() {
+      const { data, error } = await supabaseClient
+        .from('leagues')
+        .select('*')
+        .eq('owner_id', currentUser.id)
+        .order('created_at', { ascending: false });
 
-      if (!newUsername) return;
+      if (data) {
+        userLeagues = data;
+        renderLeaguesGrid();
+      }
+    }
 
-      msg.className = "text-center text-xs font-semibold text-[#25A6FF]";
-      msg.innerText = "⚽ Atualizando o passe do jogador...";
+    function renderLeaguesGrid() {
+      const grid = document.getElementById('leaguesGrid');
+      const addCard = document.getElementById('addLeagueCard');
+      
+      // Limpa os cards de ligas anteriores mantendo apenas o botão de adicionar
+      grid.innerHTML = '';
+      grid.appendChild(addCard);
+
+      userLeagues.forEach(league => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-900 border border-slate-800 hover:border-[#25A6FF]/50 rounded-2xl p-5 transition-all duration-200 hover:shadow-lg hover:shadow-[#25A6FF]/5 flex flex-col justify-between space-y-4 group";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-3">
+              <span class="bg-[#25A6FF]/15 text-[#25A6FF] text-[10px] font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wider border border-[#25A6FF]/30">
+                Organizador
+              </span>
+              <span class="text-xs text-slate-400 font-mono">#${league.code}</span>
+            </div>
+            <h3 class="text-lg font-extrabold text-white group-hover:text-[#25A6FF] transition">${league.title}</h3>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-2">${league.description || ''}</p>
+          </div>
+          <div class="border-t border-slate-800/80 pt-4 flex items-center justify-between text-xs text-slate-400">
+            <div class="flex items-center gap-3">
+              <span>👥 <strong class="text-slate-200">${league.teams.length}</strong> Times</span>
+              <span>⚽ <strong class="text-slate-200">${league.matches.length}</strong> Jogos</span>
+            </div>
+            <button onclick="openOrganizerPanelById('${league.id}')" class="text-[#25A6FF] font-bold hover:underline flex items-center gap-1">
+              Painel &rarr;
+            </button>
+          </div>
+        `;
+        grid.insertBefore(card, addCard);
+      });
+
+      document.getElementById('leaguesCountBadge').innerText = `${userLeagues.length} Ativas`;
+    }
+
+    // --- CRIAR LIGA NO SUPABASE ---
+    async function handleCreateLeague(event) {
+      event.preventDefault();
+      
+      const name = document.getElementById('leagueNameInput').value;
+      const desc = document.getElementById('leagueDescInput').value || 'Campeonato criado recentemente.';
+      const code = 'LIGA-' + Math.floor(1000 + Math.random() * 9000);
+      const btn = document.getElementById('btnCreateLeagueSubmit');
+
+      const teamInputs = document.querySelectorAll('.team-name-input');
+      const teams = Array.from(teamInputs).map((input, idx) => input.value.trim() || `Time ${idx + 1}`);
+
+      const matches = [];
+      let matchId = 1;
+      for (let i = 0; i < teams.length; i++) {
+        for (let j = i + 1; j < teams.length; j++) {
+          matches.push({
+            id: matchId++,
+            home: teams[i],
+            away: teams[j],
+            homeGoals: null,
+            awayGoals: null,
+            played: false
+          });
+        }
+      }
+
       btn.disabled = true;
+      btn.innerText = "⚽ Gerando liga...";
 
-      const { error } = await supabaseClient
-        .from('profiles')
-        .upsert({
-          id: currentUser.id,
-          username: newUsername,
-          updated_at: new Date().toISOString()
-        });
+      const { data, error } = await supabaseClient
+        .from('leagues')
+        .insert([{
+          title: name,
+          description: desc,
+          code: code,
+          owner_id: currentUser.id,
+          teams: teams,
+          matches: matches
+        }])
+        .select()
+        .single();
 
       if (error) {
-        msg.className = "text-center text-xs font-semibold text-rose-400";
-        msg.innerText = "🟨 Erro ao atualizar perfil: " + error.message;
+        alert("Erro ao criar liga: " + error.message);
         btn.disabled = false;
+        btn.innerText = "Gerar Campeonato";
         return;
       }
 
-      userProfile.username = newUsername;
-      updateUserUI();
-
-      msg.className = "text-center text-xs font-semibold text-emerald-400";
-      msg.innerText = "🥅 GOL! Perfil atualizado com sucesso!";
       btn.disabled = false;
+      btn.innerText = "Gerar Campeonato";
+      document.getElementById('createLeagueForm').reset();
+      renderTeamInputs(8);
+      closeModal('createLeagueModal');
 
-      setTimeout(() => {
-        msg.innerText = "";
-        closeModal('profileModal');
-      }, 1000);
-    });
-
-    // --- LOGOUT / SAIR DA CONTA ---
-    async function handleLogout() {
-      await supabaseClient.auth.signOut();
-      window.location.href = 'index.html';
+      await loadUserLeagues();
     }
 
-    // --- CONTROLE DE MODAIS ---
-    function openModal(id) {
-      document.getElementById(id).classList.remove('hidden');
-      document.getElementById(id).classList.add('flex');
-    }
+    // --- ABRIR PAINEL DA LIGA ---
+    function openOrganizerPanelById(leagueId) {
+      currentLeagueData = userLeagues.find(l => l.id === leagueId);
+      if (!currentLeagueData) return;
 
-    function closeModal(id) {
-      document.getElementById(id).classList.remove('flex');
-      document.getElementById(id).classList.add('hidden');
-    }
-
-    // ESTADO DA LIGA NO PAINEL
-    let currentLeagueData = {
-      title: '',
-      code: '',
-      format: 'points',
-      isOrganizer: true,
-      teams: [],
-      matches: []
-    };
-
-    function openOrganizerPanel(title, code) {
       currentLeagueData.isOrganizer = true;
-      if(title) currentLeagueData.title = title;
-      if(code) currentLeagueData.code = code;
       setupPanelUI();
     }
 
@@ -480,11 +504,6 @@
         badge.className = 'bg-[#25A6FF]/15 text-[#25A6FF] text-[10px] font-extrabold px-2 py-0.5 rounded uppercase border border-[#25A6FF]/30';
         teamsTab.classList.remove('hidden');
         if (noticeText) noticeText.innerText = 'Insira os gols e clique em Salvar para atualizar a tabela';
-      } else {
-        badge.innerText = 'Participante';
-        badge.className = 'bg-emerald-500/15 text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase border border-emerald-500/30';
-        teamsTab.classList.add('hidden');
-        if (noticeText) noticeText.innerText = 'Modo de visualização (Apenas leitura)';
       }
 
       document.getElementById('dashboardView').classList.add('hidden');
@@ -494,13 +513,14 @@
       switchTab('standings');
       renderStandings();
       renderMatches();
-      if (currentLeagueData.isOrganizer) renderTeamsEdit();
+      renderTeamsEdit();
     }
 
     function closeOrganizerPanel() {
       document.getElementById('organizerPanelArea').classList.remove('flex');
       document.getElementById('organizerPanelArea').classList.add('hidden');
       document.getElementById('dashboardView').classList.remove('hidden');
+      loadUserLeagues(); // Atualiza a lista ao voltar
     }
 
     function switchTab(tabName) {
@@ -588,41 +608,23 @@
       currentLeagueData.matches.forEach(m => {
         const card = document.createElement('div');
         card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3";
-        
-        if (currentLeagueData.isOrganizer) {
-          card.innerHTML = `
-            <span class="text-xs font-bold text-white w-28 text-right truncate">${m.home}</span>
-            <div class="flex items-center gap-2">
-              <input type="number" id="match-hg-${m.id}" value="${m.homeGoals !== null ? m.homeGoals : ''}" placeholder="0" min="0" class="w-12 h-10 text-center bg-slate-950 border border-slate-800 text-white font-bold rounded-xl focus:border-[#25A6FF] focus:outline-none" />
-              <span class="text-xs text-slate-500 font-bold">X</span>
-              <input type="number" id="match-ag-${m.id}" value="${m.awayGoals !== null ? m.awayGoals : ''}" placeholder="0" min="0" class="w-12 h-10 text-center bg-slate-950 border border-slate-800 text-white font-bold rounded-xl focus:border-[#25A6FF] focus:outline-none" />
-            </div>
-            <span class="text-xs font-bold text-white w-28 text-left truncate">${m.away}</span>
-            <button onclick="saveMatchResult(${m.id})" class="bg-[#25A6FF]/10 hover:bg-[#25A6FF] text-[#25A6FF] hover:text-white border border-[#25A6FF]/30 font-bold px-3 py-2 rounded-xl text-xs transition">
-              Salvar
-            </button>
-          `;
-        } else {
-          const hgText = m.homeGoals !== null ? m.homeGoals : '-';
-          const agText = m.awayGoals !== null ? m.awayGoals : '-';
-          card.innerHTML = `
-            <span class="text-xs font-bold text-white w-28 text-right truncate">${m.home}</span>
-            <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-950 rounded-xl border border-slate-800">
-              <span class="text-xs font-black ${m.played ? 'text-[#25A6FF]' : 'text-slate-500'}">${hgText}</span>
-              <span class="text-xs text-slate-600 font-bold">X</span>
-              <span class="text-xs font-black ${m.played ? 'text-[#25A6FF]' : 'text-slate-500'}">${agText}</span>
-            </div>
-            <span class="text-xs font-bold text-white w-28 text-left truncate">${m.away}</span>
-            <span class="text-[10px] font-bold ${m.played ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-500 bg-slate-800'} px-2 py-1 rounded-lg">
-              ${m.played ? 'Encerrado' : 'Agendado'}
-            </span>
-          `;
-        }
+        card.innerHTML = `
+          <span class="text-xs font-bold text-white w-28 text-right truncate">${m.home}</span>
+          <div class="flex items-center gap-2">
+            <input type="number" id="match-hg-${m.id}" value="${m.homeGoals !== null ? m.homeGoals : ''}" placeholder="0" min="0" class="w-12 h-10 text-center bg-slate-950 border border-slate-800 text-white font-bold rounded-xl focus:border-[#25A6FF] focus:outline-none" />
+            <span class="text-xs text-slate-500 font-bold">X</span>
+            <input type="number" id="match-ag-${m.id}" value="${m.awayGoals !== null ? m.awayGoals : ''}" placeholder="0" min="0" class="w-12 h-10 text-center bg-slate-950 border border-slate-800 text-white font-bold rounded-xl focus:border-[#25A6FF] focus:outline-none" />
+          </div>
+          <span class="text-xs font-bold text-white w-28 text-left truncate">${m.away}</span>
+          <button onclick="saveMatchResult(${m.id})" class="bg-[#25A6FF]/10 hover:bg-[#25A6FF] text-[#25A6FF] hover:text-white border border-[#25A6FF]/30 font-bold px-3 py-2 rounded-xl text-xs transition">
+            Salvar
+          </button>
+        `;
         container.appendChild(card);
       });
     }
 
-    function saveMatchResult(matchId) {
+    async function saveMatchResult(matchId) {
       const hgInput = document.getElementById(`match-hg-${matchId}`).value;
       const agInput = document.getElementById(`match-ag-${matchId}`).value;
 
@@ -631,7 +633,9 @@
         match.homeGoals = parseInt(hgInput);
         match.awayGoals = parseInt(agInput);
         match.played = true;
+
         renderStandings();
+        await syncLeagueToSupabase();
       }
     }
 
@@ -650,29 +654,31 @@
       });
     }
 
-    function saveTeamsNames() {
+    async function saveTeamsNames() {
       currentLeagueData.teams.forEach((_, index) => {
         const val = document.getElementById(`team-edit-input-${index}`).value;
         if(val.trim()) currentLeagueData.teams[index] = val.trim();
       });
       renderStandings();
       renderMatches();
+      await syncLeagueToSupabase();
+      alert("Nomes das equipes salvos com sucesso!");
     }
 
-    function copyLeagueCode() {
-      const codeText = currentLeagueData.code;
-      navigator.clipboard.writeText(codeText);
-      const btn = document.getElementById('panelLeagueCode');
-      const old = btn.innerText;
-      btn.innerText = 'Copiado!';
-      setTimeout(() => btn.innerText = old, 1500);
+    async function syncLeagueToSupabase() {
+      await supabaseClient
+        .from('leagues')
+        .update({
+          teams: currentLeagueData.teams,
+          matches: currentLeagueData.matches
+        })
+        .eq('id', currentLeagueData.id);
     }
 
     function renderTeamInputs(count) {
       const container = document.getElementById('teamsInputsContainer');
       const label = document.getElementById('teamsCountLabel');
       if (label) label.innerText = `${count} Times`;
-
       if (!container) return;
       container.innerHTML = '';
 
@@ -687,81 +693,54 @@
       }
     }
 
-    function handleCreateLeague(event) {
-      event.preventDefault();
-      
-      const name = document.getElementById('leagueNameInput').value;
-      const desc = document.getElementById('leagueDescInput').value || 'Campeonato criado recentemente.';
-      const teamCount = document.getElementById('teamsSelect').value;
-      const code = 'LIGA-' + Math.floor(1000 + Math.random() * 9000);
+    // --- SALVAR PERFIL & LOGOUT ---
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newUsername = document.getElementById('profileUsernameInput').value.trim();
+      const msg = document.getElementById('profileMsg');
+      const btn = document.getElementById('btnSaveProfile');
 
-      const teamInputs = document.querySelectorAll('.team-name-input');
-      const teams = Array.from(teamInputs).map((input, idx) => input.value.trim() || `Time ${idx + 1}`);
+      msg.className = "text-center text-xs font-semibold text-[#25A6FF]";
+      msg.innerText = "⚽ Atualizando...";
+      btn.disabled = true;
 
-      const matches = [];
-      let matchId = 1;
-      for (let i = 0; i < teams.length; i++) {
-        for (let j = i + 1; j < teams.length; j++) {
-          matches.push({
-            id: matchId++,
-            home: teams[i],
-            away: teams[j],
-            homeGoals: null,
-            awayGoals: null,
-            played: false
-          });
-        }
+      const { error } = await supabaseClient
+        .from('profiles')
+        .upsert({ id: currentUser.id, username: newUsername, updated_at: new Date().toISOString() });
+
+      if (error) {
+        msg.className = "text-center text-xs font-semibold text-rose-400";
+        msg.innerText = "🟨 Erro ao atualizar";
+        btn.disabled = false;
+        return;
       }
 
-      const leagueObj = {
-        title: name,
-        code: code,
-        teams: teams,
-        matches: matches
-      };
+      userProfile.username = newUsername;
+      document.getElementById('headerUsername').innerText = `@${newUsername}`;
+      document.getElementById('modalUsernameTag').innerText = `@${newUsername}`;
 
-      const newLeagueCard = document.createElement('div');
-      newLeagueCard.className = "bg-slate-900 border border-slate-800 hover:border-[#25A6FF]/50 rounded-2xl p-5 transition-all duration-200 hover:shadow-lg hover:shadow-[#25A6FF]/5 flex flex-col justify-between space-y-4 group";
-      newLeagueCard.innerHTML = `
-        <div>
-          <div class="flex items-start justify-between gap-2 mb-3">
-            <span class="bg-[#25A6FF]/15 text-[#25A6FF] text-[10px] font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wider border border-[#25A6FF]/30">
-              Organizador
-            </span>
-            <span class="text-xs text-slate-400 font-mono flex items-center gap-1">
-              <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 0121 9z"/></svg>
-              #${code}
-            </span>
-          </div>
+      msg.className = "text-center text-xs font-semibold text-emerald-400";
+      msg.innerText = "🥅 GOL! Atualizado com sucesso!";
+      btn.disabled = false;
 
-          <h3 class="text-lg font-extrabold text-white group-hover:text-[#25A6FF] transition">${name}</h3>
-          <p class="text-xs text-slate-400 mt-1 line-clamp-2">${desc}</p>
-        </div>
+      setTimeout(() => { msg.innerText = ""; closeModal('profileModal'); }, 1000);
+    });
 
-        <div class="border-t border-slate-800/80 pt-4 flex items-center justify-between text-xs text-slate-400">
-          <div class="flex items-center gap-3">
-            <span>👥 <strong class="text-slate-200">${teamCount}</strong> Times</span>
-            <span>⚽ <strong class="text-slate-200">${matches.length}</strong> Jogos</span>
-          </div>
-          <button onclick="currentLeagueData = ${JSON.stringify(leagueObj).replace(/"/g, '&quot;')}; openOrganizerPanel();" class="text-[#25A6FF] font-bold hover:underline flex items-center gap-1">
-            Painel &rarr;
-          </button>
-        </div>
-      `;
-
-      const grid = document.getElementById('leaguesGrid');
-      const addCard = document.getElementById('addLeagueCard');
-      grid.insertBefore(newLeagueCard, addCard);
-
-      activeLeaguesCount++;
-      document.getElementById('leaguesCountBadge').innerText = `${activeLeaguesCount} Ativas`;
-
-      document.getElementById('createLeagueForm').reset();
-      renderTeamInputs(8);
-      closeModal('createLeagueModal');
+    async function handleLogout() {
+      await supabaseClient.auth.signOut();
+      window.location.href = 'index.html';
     }
 
-    // Inicialização ao carregar a página
+    // Modais
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('flex'); document.getElementById(id).classList.add('hidden'); }
+    function copyLeagueCode() {
+      navigator.clipboard.writeText(currentLeagueData.code);
+      const btn = document.getElementById('panelLeagueCode');
+      btn.innerText = 'Copiado!';
+      setTimeout(() => btn.innerText = `#${currentLeagueData.code}`, 1500);
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       initDashboard();
       renderTeamInputs(8);
@@ -769,13 +748,9 @@
 
     window.onclick = function(event) {
       ['createLeagueModal', 'joinLeagueModal', 'profileModal'].forEach(id => {
-        const modal = document.getElementById(id);
-        if (event.target === modal) {
-          closeModal(id);
-        }
+        if (event.target === document.getElementById(id)) closeModal(id);
       });
     }
   </script>
-
 </body>
 </html>
