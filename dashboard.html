@@ -5,56 +5,225 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Liga Manager - Painel</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SDK do Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 text-white min-h-screen p-4">
+<body class="bg-slate-900 text-white min-h-screen p-4 md:p-8">
 
   <div class="max-w-4xl mx-auto space-y-6">
-    <!-- Cabeçalho -->
-    <header class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center shadow-lg">
-      <h1 class="text-xl font-bold text-emerald-400">Liga Manager</h1>
-      <button onclick="terminarSessao()" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-semibold transition">Sair</button>
-    </header>
-
-    <!-- Conteúdo Principal -->
-    <main class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg space-y-4">
-      <h2 class="text-2xl font-bold">Bem-vindo ao Painel!</h2>
-      <p class="text-slate-400 text-sm">Aqui vais gerir os torneios, as tabelas de classificação e os jogos da liga.</p>
-      
-      <div id="userInfo" class="bg-slate-900 p-4 rounded-lg border border-slate-700 text-sm text-slate-300">
-        A carregar dados do utilizador...
+    
+    <!-- Cabeçalho do Painel -->
+    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl">
+      <div>
+        <h1 class="text-2xl font-bold text-emerald-400">Liga Manager</h1>
+        <p class="text-sm text-slate-400 mt-1" id="userEmail">Carregando utilizador...</p>
       </div>
-    </main>
+      <button id="btnLogout" class="bg-red-600 hover:bg-red-500 font-semibold px-4 py-2 rounded-lg transition text-sm">
+        Sair da Conta
+      </button>
+    </div>
+
+    <!-- Área de Ações: Criar ou Entrar em Ligas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      
+      <!-- Criar Liga -->
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-xl">
+        <h2 class="text-lg font-semibold text-emerald-400 mb-3">Criar Nova Liga</h2>
+        <div class="space-y-3">
+          <input type="text" id="leagueNameInput" placeholder="Nome da Liga (ex: STF-99)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-500 text-sm">
+          <button id="btnCreateLeague" class="w-full bg-emerald-600 hover:bg-emerald-500 font-semibold py-2.5 rounded-lg transition text-sm">
+            Criar Liga
+          </button>
+        </div>
+      </div>
+
+      <!-- Entrar numa Liga -->
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-xl">
+        <h2 class="text-lg font-semibold text-emerald-400 mb-3">Entrar por Código</h2>
+        <div class="space-y-3">
+          <input type="text" id="leagueCodeInput" placeholder="Código de Convite (ex: A1B2C3)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-500 text-sm uppercase">
+          <button id="btnJoinLeague" class="w-full bg-slate-700 hover:bg-slate-600 font-semibold py-2.5 rounded-lg transition text-sm">
+            Entrar na Liga
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Mensagens de Feedback -->
+    <div id="mensagem" class="text-center text-sm font-medium"></div>
+
+    <!-- Lista de Ligas do Utilizador -->
+    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
+      <h2 class="text-xl font-bold text-white mb-4">As Minhas Ligas</h2>
+      <div id="leaguesList" class="space-y-3">
+        <p class="text-slate-400 text-sm">A carregar as tuas ligas...</p>
+      </div>
+    </div>
+
   </div>
 
   <script>
     const SUPABASE_URL = 'https://rhymsnkxlieqzdruirdc.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
+    
     const { createClient } = window.supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    async function verificarSessao() {
-      const { data: { session } } = await supabaseClient.auth.getSession();
+    const msg = document.getElementById('mensagem');
+    let currentUser = null;
+
+    // 1. Verificar sessão ativa ao carregar a página
+    async function checkUser() {
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
       
-      if (!session) {
+      if (!session || error) {
         window.location.href = 'index.html';
         return;
       }
 
-      const user = session.user;
-      document.getElementById('userInfo').innerHTML = `
-        <p><strong>E-mail:</strong> ${user.email}</p>
-        <p><strong>ID de Utilizador:</strong> ${user.id}</p>
-      `;
+      currentUser = session.user;
+      document.getElementById('userEmail').innerText = `E-mail: ${currentUser.email}`;
+      loadUserLeagues();
     }
 
-    async function terminarSessao() {
+    // 2. Logout
+    document.getElementById('btnLogout').addEventListener('click', async () => {
       await supabaseClient.auth.signOut();
       window.location.href = 'index.html';
+    });
+
+    // 3. Criar Liga
+    document.getElementById('btnCreateLeague').addEventListener('click', async () => {
+      const leagueName = document.getElementById('leagueNameInput').value.trim();
+      if (!leagueName) {
+        msg.className = "text-yellow-400";
+        msg.innerText = "Insira o nome da liga.";
+        return;
+      }
+
+      // Gerar um código aleatório de 6 carateres
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      // Inserir na tabela leagues
+      const { data: leagueData, error: leagueError } = await supabaseClient
+        .from('leagues')
+        .insert([{ name: leagueName, code: code, created_by: currentUser.id }])
+        .select()
+        .single();
+
+      if (leagueError) {
+        msg.className = "text-red-400";
+        msg.innerText = "Erro ao criar liga: " + leagueError.message;
+        return;
+      }
+
+      // Adicionar o criador como 'admin' na tabela league_members
+      const { error: memberError } = await supabaseClient
+        .from('league_members')
+        .insert([{ league_id: leagueData.id, user_id: currentUser.id, role: 'admin' }]);
+
+      if (memberError) {
+        msg.className = "text-red-400";
+        msg.innerText = "Erro ao definir cargo de admin: " + memberError.message;
+        return;
+      }
+
+      msg.className = "text-emerald-400";
+      msg.innerText = `Liga criada com sucesso! Código de convite: ${code}`;
+      document.getElementById('leagueNameInput').value = '';
+      loadUserLeagues();
+    });
+
+    // 4. Entrar numa Liga por Código
+    document.getElementById('btnJoinLeague').addEventListener('click', async () => {
+      const code = document.getElementById('leagueCodeInput').value.trim().toUpperCase();
+      if (!code) {
+        msg.className = "text-yellow-400";
+        msg.innerText = "Insira o código da liga.";
+        return;
+      }
+
+      // Procurar a liga pelo código
+      const { data: league, error: findError } = await supabaseClient
+        .from('leagues')
+        .select('id, name')
+        .eq('code', code)
+        .single();
+
+      if (findError || !league) {
+        msg.className = "text-red-400";
+        msg.innerText = "Liga não encontrada com este código.";
+        return;
+      }
+
+      // Inserir utilizador como 'player'
+      const { error: joinError } = await supabaseClient
+        .from('league_members')
+        .insert([{ league_id: league.id, user_id: currentUser.id, role: 'player' }]);
+
+      if (joinError) {
+        msg.className = "text-yellow-400";
+        msg.innerText = "Já fazes parte desta liga ou ocorreu um erro.";
+        return;
+      }
+
+      msg.className = "text-emerald-400";
+      msg.innerText = `Entraste com sucesso na liga: ${league.name}!`;
+      document.getElementById('leagueCodeInput').value = '';
+      loadUserLeagues();
+    });
+
+    // 5. Carregar Ligas do Utilizador
+    async function loadUserLeagues() {
+      const container = document.getElementById('leaguesList');
+      container.innerHTML = '<p class="text-slate-400 text-sm">A atualizar lista...</p>';
+
+      // Buscar associações na tabela league_members
+      const { data: memberships, error } = await supabaseClient
+        .from('league_members')
+        .select(`
+          role,
+          leagues ( id, name, code, created_by )
+        `)
+        .eq('user_id', currentUser.id);
+
+      if (error) {
+        container.innerHTML = `<p class="text-red-400 text-sm">Erro ao carregar ligas: ${error.message}</p>`;
+        return;
+      }
+
+      if (!memberships || memberships.length === 0) {
+        container.innerHTML = '<p class="text-slate-400 text-sm">Ainda não participas em nenhuma liga. Cria uma ou entra com um código acima!</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      memberships.forEach(item => {
+        const league = item.leagues;
+        if (!league) return;
+        const isAdmin = item.role === 'admin';
+
+        const card = document.createElement('div');
+        card.className = "bg-slate-900 p-4 rounded-lg border border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3";
+        card.innerHTML = `
+          <div>
+            <h3 class="font-bold text-white text-base">${league.name}</h3>
+            <p class="text-xs text-slate-400">Código: <span class="text-emerald-400 font-mono">${league.code}</span> | Cargo: <span class="uppercase text-yellow-400 font-semibold">${item.role}</span></p>
+          </div>
+          <div class="flex gap-2 w-full sm:w-auto">
+            <button onclick="alert('Funcionalidade de abrir a tabela da liga em breve!')" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold px-3 py-2 rounded transition">
+              Aceder Liga
+            </button>
+            ${isAdmin ? `<span class="bg-slate-800 text-slate-400 text-xs px-2 py-1 rounded border border-slate-700 flex items-center">Painel Admin Ativo</span>` : ''}
+          </div>
+        `;
+        container.appendChild(card);
+      });
     }
 
-    verificarSessao();
+    // Inicializar verificação
+    checkUser();
   </script>
 </body>
 </html>
-
