@@ -432,6 +432,42 @@
     </div>
   </div>
 
+  <!-- MODAL DE CONFIRMAÇÃO DE SOLICITAÇÃO -->
+  <div id="confirmLeagueActionModal"
+    class="fixed inset-0 z-[110] hidden items-center justify-center p-5 bg-slate-900/60 backdrop-blur-sm">
+
+    <div class="bg-white w-full max-w-sm rounded-3xl border border-sky-100 shadow-2xl p-7 text-center">
+
+      <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-sky-50 flex items-center justify-center text-3xl">
+        ⚽
+      </div>
+
+      <h3 id="confirmLeagueActionTitle"
+        class="text-xl font-black text-slate-800 mb-2">
+        Confirmar ação?
+      </h3>
+
+      <p id="confirmLeagueActionMessage"
+        class="text-sm text-slate-500 leading-relaxed mb-7">
+        Deseja realmente continuar?
+      </p>
+
+      <div class="flex gap-3">
+        <button onclick="closeLeagueActionConfirmation()"
+          class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold text-sm cursor-pointer">
+          Cancelar
+        </button>
+
+        <button id="confirmLeagueActionButton"
+          onclick="executeLeagueActionConfirmation()"
+          class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-sm cursor-pointer">
+          Confirmar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- MODAL PERSONALIZADO DE SUCESSO/FEEDBACK -->
   <div id="feedbackModal"
     class="fixed inset-0 z-[100] hidden items-center justify-center p-5 bg-slate-900/60 backdrop-blur-sm">
@@ -476,6 +512,7 @@
     let selectedAvatarBase64 = null;
     let notificationsChannel = null;
     let activeLeague = null;
+    let pendingLeagueAction = null;
 
     async function initDashboard() {
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -535,18 +572,153 @@
     }
 
     // ==========================================
+    // MODAL DE CONFIRMAÇÃO DE AÇÃO
+    // ==========================================
+
+    function reviewLeagueRequest(requestId, newStatus, button) {
+      if (!activeLeague || activeLeague.owner_id !== currentUser.id) {
+        showFeedbackModal(
+          'Atenção',
+          'Somente o organizador pode analisar solicitações.'
+        );
+        return;
+      }
+
+      pendingLeagueAction = {
+        requestId,
+        newStatus,
+        button
+      };
+
+      const isApproval = newStatus === 'approved';
+
+      document.getElementById('confirmLeagueActionTitle').innerText =
+        isApproval ? 'Aprovar participante?' : 'Recusar solicitação?';
+
+      document.getElementById('confirmLeagueActionMessage').innerText =
+        isApproval
+          ? 'Deseja realmente aprovar esta solicitação? O jogador será adicionado à liga.'
+          : 'Deseja realmente recusar esta solicitação?';
+
+      const confirmButton = document.getElementById('confirmLeagueActionButton');
+
+      confirmButton.innerText = isApproval ? 'Sim, aprovar' : 'Sim, recusar';
+
+      confirmButton.className = isApproval
+        ? 'flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-sm cursor-pointer'
+        : 'flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-sm cursor-pointer';
+
+      const modal = document.getElementById('confirmLeagueActionModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeLeagueActionConfirmation() {
+      const modal = document.getElementById('confirmLeagueActionModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      pendingLeagueAction = null;
+    }
+
+    async function executeLeagueActionConfirmation() {
+      if (!pendingLeagueAction) return;
+
+      const action = pendingLeagueAction;
+      pendingLeagueAction = null;
+
+      const modal = document.getElementById('confirmLeagueActionModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+
+      await processLeagueRequest(
+        action.requestId,
+        action.newStatus,
+        action.button
+      );
+    }
+
+    async function processLeagueRequest(requestId, newStatus, button) {
+      button.disabled = true;
+      button.innerText = 'Processando...';
+
+      const { data, error } = await supabaseClient
+        .from('league_requests')
+        .update({
+          status: newStatus,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: currentUser.id
+        })
+        .eq('id', requestId)
+        .eq('league_id', activeLeague.id)
+        .eq('status', 'pending')
+        .select()
+        .maybeSingle();
+
+      if (error || !data) {
+        showFeedbackModal(
+          'Erro',
+          error?.message || 'A solicitação não foi atualizada. Talvez já tenha sido analisada.'
+        );
+
+        await loadLeagueRequests();
+        return;
+      }
+
+      await loadLeagueRequests();
+      await loadLeagueUsers();
+
+      if (newStatus === 'approved') {
+        showFeedbackModal(
+          'Jogador aprovado!',
+          'O jogador foi aprovado e poderá participar desta liga.'
+        );
+      } else {
+        showFeedbackModal(
+          'Solicitação recusada',
+          'A solicitação foi recusada.'
+        );
+      }
+    }
+
+    // ==========================================
     // PAINEL DA LIGA (SOLICITAÇÕES E USUÁRIOS)
     // ==========================================
 
     async function openLeaguePanelById(leagueId) {
       const { data, error } = await supabaseClient
         .from('leagues')
-        .select('*')
+        .select('id, title, owner_id')
         .eq('id', leagueId)
         .single();
 
       if (error || !data) {
         showFeedbackModal('Erro', 'Não foi possível abrir esta liga.');
+        return;
+      }
+
+      let isAdmin = data.owner_id === currentUser.id;
+
+      if (!isAdmin) {
+        const { data: membership, error: memberError } = await supabaseClient
+          .from('league_members')
+          .select('role')
+          .eq('league_id', leagueId)
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (memberError) {
+          showFeedbackModal('Erro', 'Não foi possível verificar suas permissões.');
+          return;
+        }
+
+        isAdmin = membership?.role === 'admin';
+      }
+
+      if (!isAdmin) {
+        showFeedbackModal(
+          'Acesso restrito',
+          'Somente administradores podem acessar o gerenciamento desta liga.'
+        );
         return;
       }
 
@@ -675,49 +847,6 @@
           </div>
         `;
       }).join('');
-    }
-
-    async function reviewLeagueRequest(requestId, newStatus, button) {
-      if (!activeLeague || activeLeague.owner_id !== currentUser.id) {
-        showFeedbackModal('Atenção', 'Somente o organizador pode analisar solicitações.');
-        return;
-      }
-
-      const action = newStatus === 'approved' ? 'aprovar' : 'recusar';
-      if (!confirm(`Deseja realmente ${action} esta solicitação?`)) {
-        return;
-      }
-
-      button.disabled = true;
-      button.innerText = 'Processando...';
-
-      const { data, error } = await supabaseClient
-        .from('league_requests')
-        .update({
-          status: newStatus,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: currentUser.id
-        })
-        .eq('id', requestId)
-        .eq('league_id', activeLeague.id)
-        .eq('status', 'pending')
-        .select()
-        .maybeSingle();
-
-      if (error || !data) {
-        showFeedbackModal('Erro', error?.message || 'A solicitação não foi atualizada. Talvez já tenha sido analisada.');
-        await loadLeagueRequests();
-        return;
-      }
-
-      await loadLeagueRequests();
-      await loadLeagueUsers();
-
-      if (newStatus === 'approved') {
-        showFeedbackModal('Jogador aprovado!', 'O jogador foi aprovado e poderá participar desta liga.');
-      } else {
-        showFeedbackModal('Solicitação recusada', 'A solicitação foi recusada.');
-      }
     }
 
     async function loadLeagueUsers() {
@@ -1190,7 +1319,7 @@
     }
 
     // ==========================================
-    // CARREGAR MINHAS LIGAS (Criadas + Participante)
+    // CARREGAR MINHAS LIGAS (Criadas + Participante com Roles)
     // ==========================================
 
     async function loadMyLeagues() {
@@ -1206,7 +1335,7 @@
 
       const { data: memberRows } = await supabaseClient
         .from('league_members')
-        .select('league_id')
+        .select('league_id, role')
         .eq('user_id', currentUser.id);
 
       let memberLeagues = [];
@@ -1236,12 +1365,15 @@
 
       container.innerHTML = myLeagues.map(t => {
         const isOrganizer = t.owner_id === currentUser.id;
+        const memberRole = (memberRows || []).find(m => m.league_id === t.id)?.role;
+        const isAdmin = isOrganizer || memberRole === 'admin';
+
         return `
           <div class="bg-white border border-sky-100 rounded-2xl p-5 shadow-sm space-y-4 hover:border-sky-300 transition">
             <div class="flex items-start justify-between">
               <span class="text-xs font-bold bg-sky-50 text-sky-600 px-2.5 py-1 rounded-lg border border-sky-100">${t.game || 'eFootball™ mobile'}</span>
-              <span class="text-[10px] font-black tracking-wider uppercase ${isOrganizer ? 'bg-amber-500' : 'bg-emerald-600'} text-white px-2.5 py-1 rounded-md shadow-xs">
-                ${isOrganizer ? '👑 ORGANIZADOR' : '⚽ PARTICIPANTE'}
+              <span class="text-[10px] font-black tracking-wider uppercase ${isOrganizer ? 'bg-amber-500' : (memberRole === 'admin' ? 'bg-sky-600' : 'bg-emerald-600')} text-white px-2.5 py-1 rounded-md shadow-xs">
+                ${isOrganizer ? '👑 ORGANIZADOR' : (memberRole === 'admin' ? '🛡️ ADMIN' : '⚽ PARTICIPANTE')}
               </span>
             </div>
             <div>
@@ -1260,7 +1392,15 @@
             </div>
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
               <span class="text-slate-500 font-medium">${t.visibility === 'publica' ? '🌐 Pública' : '🔒 Privada'}</span>
-              <button onclick="openLeaguePanelById('${t.id}')" class="text-sky-600 font-bold hover:underline cursor-pointer">Painel da Liga →</button>
+              ${isAdmin
+                ? `<button onclick="openLeaguePanelById('${escapeNotificationHTML(t.id)}')"
+                    class="text-sky-600 font-bold hover:underline cursor-pointer">
+                    Painel da Liga →
+                  </button>`
+                : `<span class="text-xs font-semibold text-slate-400">
+                    Área do participante
+                  </span>`
+              }
             </div>
           </div>
         `;
