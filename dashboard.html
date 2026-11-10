@@ -424,55 +424,82 @@
       }).join('');
     }
 
-    // Carregar Minhas Ligas 100% do Supabase
+    // Carregar Minhas Ligas (Criadas + Participante) 100% do Supabase
     async function loadMyLeagues() {
       const container = document.getElementById('myLeaguesList');
       if (!container) return;
 
       container.innerHTML = `<div class="col-span-full text-center py-8 text-xs text-slate-400 font-bold">Carregando suas ligas da nuvem...</div>`;
 
-      const { data: myLeagues, error } = await supabaseClient
+      // 1. Ligas criadas pelo usuário
+      const { data: ownedLeagues } = await supabaseClient
         .from('leagues')
         .select('*')
-        .eq('owner_id', currentUser.id)
-        .order('created_at', { ascending: false });
+        .eq('owner_id', currentUser.id);
 
-      if (error || !myLeagues || myLeagues.length === 0) {
+      // 2. Ligas em que o usuário participa via league_members
+      const { data: memberRows } = await supabaseClient
+        .from('league_members')
+        .select('league_id')
+        .eq('user_id', currentUser.id);
+
+      let memberLeagues = [];
+      if (memberRows && memberRows.length > 0) {
+        const leagueIds = memberRows.map(m => m.league_id);
+        const { data: fetchedMemberLeagues } = await supabaseClient
+          .from('leagues')
+          .select('*')
+          .in('id', leagueIds);
+        
+        if (fetchedMemberLeagues) memberLeagues = fetchedMemberLeagues;
+      }
+
+      // Unir listas e remover duplicadas
+      const allLeaguesMap = new Map();
+      [...(ownedLeagues || []), ...(memberLeagues || [])].forEach(l => allLeaguesMap.set(l.id, l));
+      const myLeagues = Array.from(allLeaguesMap.values());
+
+      if (myLeagues.length === 0) {
         container.innerHTML = `
           <div class="col-span-full bg-white p-8 rounded-2xl border border-sky-100 text-center space-y-3">
-            <p class="text-slate-500 text-sm font-medium">Você ainda não criou nenhuma liga.</p>
+            <p class="text-slate-500 text-sm font-medium">Você ainda não participa ou criou nenhuma liga.</p>
             <button onclick="toggleCreateTournamentModal(true)" class="text-sky-600 hover:text-sky-700 text-xs font-bold underline cursor-pointer">Criar minha primeira liga</button>
           </div>
         `;
         return;
       }
 
-      container.innerHTML = myLeagues.map(t => `
-        <div class="bg-white border border-sky-100 rounded-2xl p-5 shadow-sm space-y-4 hover:border-sky-300 transition">
-          <div class="flex items-start justify-between">
-            <span class="text-xs font-bold bg-sky-50 text-sky-600 px-2.5 py-1 rounded-lg border border-sky-100">${t.game || 'eFootball™ mobile'}</span>
-            <span class="text-[10px] font-black tracking-wider uppercase bg-amber-500 text-white px-2.5 py-1 rounded-md shadow-xs">
-              👑 ORGANIZADOR
-            </span>
-          </div>
-          <div>
-            <h4 class="font-bold text-slate-800 text-base leading-snug">${t.title}</h4>
-            <p class="text-xs text-slate-400 font-medium mt-1">Times: ${t.teams ? t.teams.length : 0} participantes</p>
-            
-            <div onclick="copyTournamentCode('${t.code}', this)" class="mt-2.5 p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs font-mono cursor-pointer hover:bg-sky-50 hover:border-sky-200 transition group" title="Clique para copiar">
-              <span class="text-slate-500 font-sans font-bold group-hover:text-sky-700">Código de Acesso:</span>
-              <span class="font-bold text-sky-600 bg-white px-2 py-0.5 rounded border border-slate-200 group-hover:border-sky-300 flex items-center gap-1">
-                <span>${t.code}</span>
-                <span class="text-[10px]">📋</span>
+      container.innerHTML = myLeagues.map(t => {
+        const isOrganizer = t.owner_id === currentUser.id;
+        return `
+          <div class="bg-white border border-sky-100 rounded-2xl p-5 shadow-sm space-y-4 hover:border-sky-300 transition">
+            <div class="flex items-start justify-between">
+              <span class="text-xs font-bold bg-sky-50 text-sky-600 px-2.5 py-1 rounded-lg border border-sky-100">${t.game || 'eFootball™ mobile'}</span>
+              <span class="text-[10px] font-black tracking-wider uppercase ${isOrganizer ? 'bg-amber-500' : 'bg-emerald-600'} text-white px-2.5 py-1 rounded-md shadow-xs">
+                ${isOrganizer ? '👑 ORGANIZADOR' : '⚽ PARTICIPANTE'}
               </span>
             </div>
+            <div>
+              <h4 class="font-bold text-slate-800 text-base leading-snug">${t.title}</h4>
+              <p class="text-xs text-slate-400 font-medium mt-1">Times: ${t.teams ? t.teams.length : 0} participantes</p>
+              
+              ${isOrganizer ? `
+                <div onclick="copyTournamentCode('${t.code}', this)" class="mt-2.5 p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs font-mono cursor-pointer hover:bg-sky-50 hover:border-sky-200 transition group" title="Clique para copiar">
+                  <span class="text-slate-500 font-sans font-bold group-hover:text-sky-700">Código de Acesso:</span>
+                  <span class="font-bold text-sky-600 bg-white px-2 py-0.5 rounded border border-slate-200 group-hover:border-sky-300 flex items-center gap-1">
+                    <span>${t.code}</span>
+                    <span class="text-[10px]">📋</span>
+                  </span>
+                </div>
+              ` : ''}
+            </div>
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span class="text-slate-500 font-medium">${t.visibility === 'publica' ? '🌐 Pública' : '🔒 Privada'}</span>
+              <button onclick="openLeaguePanelById('${t.id}')" class="text-sky-600 font-bold hover:underline cursor-pointer">Painel da Liga →</button>
+            </div>
           </div>
-          <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span class="text-slate-500 font-medium">${t.visibility === 'publica' ? '🌐 Pública' : '🔒 Privada'}</span>
-            <button onclick="openLeaguePanelById('${t.id}')" class="text-sky-600 font-bold hover:underline cursor-pointer">Painel da Liga →</button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     // Criar Liga no Supabase
