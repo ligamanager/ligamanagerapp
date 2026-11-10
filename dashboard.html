@@ -349,6 +349,122 @@
     </div>
   </div>
 
+  <!-- PAINEL DA LIGA (GERENCIAMENTO, SOLICITAÇÕES E USUÁRIOS) -->
+  <div id="leaguePanelModal"
+    class="fixed inset-0 z-[80] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3">
+
+    <div class="bg-white w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl shadow-2xl flex flex-col">
+
+      <!-- Cabeçalho -->
+      <div class="p-5 sm:p-6 border-b border-sky-100 flex items-center justify-between">
+        <div class="min-w-0">
+          <span class="text-[10px] font-black uppercase tracking-widest text-sky-600">
+            Gerenciamento da liga
+          </span>
+          <h2 id="leaguePanelTitle" class="text-xl font-black text-slate-800 truncate">
+            Minha Liga
+          </h2>
+        </div>
+
+        <button onclick="closeLeaguePanel()"
+          class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold cursor-pointer">
+          ✕
+        </button>
+      </div>
+
+      <!-- Abas -->
+      <div class="grid grid-cols-2 gap-2 px-5 pt-4">
+        <button id="leagueRequestsTab"
+          onclick="showLeagueTab('requests')"
+          class="py-3 rounded-xl text-sm font-bold bg-sky-600 text-white cursor-pointer">
+          📩 Solicitações
+          <span id="leagueRequestsCount"
+            class="ml-1 bg-white/20 px-2 py-0.5 rounded-full text-xs">0</span>
+        </button>
+
+        <button id="leagueUsersTab"
+          onclick="showLeagueTab('users')"
+          class="py-3 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 cursor-pointer">
+          👥 Usuários
+          <span id="leagueUsersCount"
+            class="ml-1 bg-slate-200 px-2 py-0.5 rounded-full text-xs">0</span>
+        </button>
+      </div>
+
+      <!-- Conteúdo -->
+      <div class="p-5 sm:p-6 overflow-y-auto flex-1">
+
+        <div id="leagueRequestsContent" class="space-y-3">
+          <div id="leagueRequestsList" class="space-y-3">
+            <p class="text-center text-sm text-slate-400 py-8">
+              Carregando solicitações...
+            </p>
+          </div>
+        </div>
+
+        <div id="leagueUsersContent" class="hidden space-y-3">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-black text-slate-800">Participantes da liga</h3>
+              <p class="text-xs text-slate-400">
+                Jogadores que fazem parte desta competição
+              </p>
+            </div>
+          </div>
+
+          <div id="leagueUsersList" class="space-y-3">
+            <p class="text-center text-sm text-slate-400 py-8">
+              Carregando usuários...
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Rodapé -->
+      <div class="p-4 border-t border-slate-100">
+        <button onclick="closeLeaguePanel()"
+          class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold text-sm cursor-pointer">
+          Fechar painel
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL PERSONALIZADO DE SUCESSO/FEEDBACK -->
+  <div id="feedbackModal"
+    class="fixed inset-0 z-[100] hidden items-center justify-center p-5 bg-slate-900/60 backdrop-blur-sm">
+
+    <div id="feedbackCard"
+      class="bg-white w-full max-w-sm rounded-3xl border border-sky-100 shadow-2xl p-7 text-center relative overflow-hidden">
+
+      <div class="absolute top-0 left-0 w-32 h-32 bg-sky-100/60 rounded-full blur-3xl -translate-x-10 -translate-y-10"></div>
+      <div class="absolute bottom-0 right-0 w-32 h-32 bg-cyan-100/60 rounded-full blur-3xl translate-x-10 translate-y-10"></div>
+
+      <div class="relative z-10">
+        <div class="w-20 h-20 mx-auto mb-5 rounded-3xl bg-gradient-to-br from-sky-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-sky-500/25">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+
+        <h3 id="feedbackTitle" class="text-2xl font-black text-slate-800 mb-3">
+          Solicitação enviada!
+        </h3>
+
+        <p id="feedbackMessage" class="text-sm text-slate-500 leading-relaxed mb-7">
+          Sua solicitação foi enviada com sucesso! Aguarde a aprovação do organizador.
+        </p>
+
+        <button onclick="closeFeedbackModal()"
+          class="w-full bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-700 hover:to-cyan-600 text-white font-extrabold py-3.5 rounded-xl shadow-lg shadow-sky-500/20 transition active:scale-95 cursor-pointer">
+          Entendi
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const SUPABASE_URL = 'https://rhymsnkxlieqzdruirdc.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
@@ -359,6 +475,7 @@
     let userProfile = null;
     let selectedAvatarBase64 = null;
     let notificationsChannel = null;
+    let activeLeague = null;
 
     async function initDashboard() {
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -397,6 +514,285 @@
         document.getElementById('profileAvatarPreview').innerHTML = `<img src="${userProfile.avatar_url}" class="w-full h-full object-cover">`;
         document.getElementById('headerAvatarMini').innerHTML = `<img src="${userProfile.avatar_url}" class="w-full h-full object-cover">`;
       }
+    }
+
+    // ==========================================
+    // MODAL DE FEEDBACK / SUCESSO
+    // ==========================================
+
+    function showFeedbackModal(title, message) {
+      const modal = document.getElementById('feedbackModal');
+      document.getElementById('feedbackTitle').innerText = title;
+      document.getElementById('feedbackMessage').innerText = message;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeFeedbackModal() {
+      const modal = document.getElementById('feedbackModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // ==========================================
+    // PAINEL DA LIGA (SOLICITAÇÕES E USUÁRIOS)
+    // ==========================================
+
+    async function openLeaguePanelById(leagueId) {
+      const { data, error } = await supabaseClient
+        .from('leagues')
+        .select('*')
+        .eq('id', leagueId)
+        .single();
+
+      if (error || !data) {
+        showFeedbackModal('Erro', 'Não foi possível abrir esta liga.');
+        return;
+      }
+
+      activeLeague = data;
+      document.getElementById('leaguePanelTitle').innerText = data.title;
+
+      const modal = document.getElementById('leaguePanelModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      showLeagueTab('requests');
+
+      await loadLeagueRequests();
+      await loadLeagueUsers();
+    }
+
+    function closeLeaguePanel() {
+      const modal = document.getElementById('leaguePanelModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function showLeagueTab(tab) {
+      const requestsContent = document.getElementById('leagueRequestsContent');
+      const usersContent = document.getElementById('leagueUsersContent');
+
+      const requestsButton = document.getElementById('leagueRequestsTab');
+      const usersButton = document.getElementById('leagueUsersTab');
+
+      if (tab === 'requests') {
+        requestsContent.classList.remove('hidden');
+        usersContent.classList.add('hidden');
+
+        requestsButton.className = 'py-3 rounded-xl text-sm font-bold bg-sky-600 text-white cursor-pointer';
+        usersButton.className = 'py-3 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 cursor-pointer';
+      } else {
+        usersContent.classList.remove('hidden');
+        requestsContent.classList.add('hidden');
+
+        usersButton.className = 'py-3 rounded-xl text-sm font-bold bg-sky-600 text-white cursor-pointer';
+        requestsButton.className = 'py-3 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 cursor-pointer';
+      }
+    }
+
+    async function loadLeagueRequests() {
+      if (!activeLeague) return;
+
+      const container = document.getElementById('leagueRequestsList');
+      container.innerHTML = `<p class="text-center text-sm text-slate-400 py-8">Buscando solicitações...</p>`;
+
+      const { data: requests, error } = await supabaseClient
+        .from('league_requests')
+        .select('*')
+        .eq('league_id', activeLeague.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        container.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Erro ao carregar solicitações: ${escapeNotificationHTML(error.message)}</p>`;
+        return;
+      }
+
+      document.getElementById('leagueRequestsCount').innerText = (requests || []).length;
+
+      if (!requests || requests.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10">
+            <div class="text-4xl mb-3">📩</div>
+            <h3 class="font-bold text-slate-700">Nenhuma solicitação pendente</h3>
+            <p class="text-xs text-slate-400 mt-1">Quando alguém solicitar entrada, aparecerá aqui.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const userIds = [...new Set(requests.map(r => r.user_id))];
+      const { data: profiles, error: profilesError } = await supabaseClient
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) {
+        container.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Não foi possível carregar os perfis dos solicitantes.</p>`;
+        return;
+      }
+
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+
+      container.innerHTML = requests.map(request => {
+        const profile = profileMap.get(request.user_id);
+        const username = profile?.username || 'Jogador';
+        const formattedUsername = username.startsWith('@') ? username : '@' + username;
+
+        const avatar = profile?.avatar_url
+          ? `<img src="${escapeNotificationHTML(profile.avatar_url)}" class="w-full h-full object-cover">`
+          : '👤';
+
+        return `
+          <div class="bg-white border border-sky-100 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-full bg-sky-50 flex items-center justify-center overflow-hidden text-xl">
+                ${avatar}
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <h4 class="font-black text-slate-800 text-sm truncate">
+                  ${escapeNotificationHTML(formattedUsername)}
+                </h4>
+                <p class="text-xs text-slate-400">Quer participar desta liga</p>
+              </div>
+
+              <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">PENDENTE</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="reviewLeagueRequest('${escapeNotificationHTML(request.id)}', 'approved', this)"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 text-xs font-bold cursor-pointer">
+                ✓ Aprovar
+              </button>
+
+              <button onclick="reviewLeagueRequest('${escapeNotificationHTML(request.id)}', 'rejected', this)"
+                class="bg-red-50 hover:bg-red-100 text-red-600 rounded-xl py-2.5 text-xs font-bold cursor-pointer">
+                ✕ Recusar
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function reviewLeagueRequest(requestId, newStatus, button) {
+      if (!activeLeague || activeLeague.owner_id !== currentUser.id) {
+        showFeedbackModal('Atenção', 'Somente o organizador pode analisar solicitações.');
+        return;
+      }
+
+      const action = newStatus === 'approved' ? 'aprovar' : 'recusar';
+      if (!confirm(`Deseja realmente ${action} esta solicitação?`)) {
+        return;
+      }
+
+      button.disabled = true;
+      button.innerText = 'Processando...';
+
+      const { data, error } = await supabaseClient
+        .from('league_requests')
+        .update({
+          status: newStatus,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: currentUser.id
+        })
+        .eq('id', requestId)
+        .eq('league_id', activeLeague.id)
+        .eq('status', 'pending')
+        .select()
+        .maybeSingle();
+
+      if (error || !data) {
+        showFeedbackModal('Erro', error?.message || 'A solicitação não foi atualizada. Talvez já tenha sido analisada.');
+        await loadLeagueRequests();
+        return;
+      }
+
+      await loadLeagueRequests();
+      await loadLeagueUsers();
+
+      if (newStatus === 'approved') {
+        showFeedbackModal('Jogador aprovado!', 'O jogador foi aprovado e poderá participar desta liga.');
+      } else {
+        showFeedbackModal('Solicitação recusada', 'A solicitação foi recusada.');
+      }
+    }
+
+    async function loadLeagueUsers() {
+      if (!activeLeague) return;
+
+      const container = document.getElementById('leagueUsersList');
+      container.innerHTML = `<p class="text-center text-sm text-slate-400 py-8">Carregando participantes...</p>`;
+
+      const { data: members, error } = await supabaseClient
+        .from('league_members')
+        .select('user_id')
+        .eq('league_id', activeLeague.id);
+
+      if (error) {
+        container.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Erro ao carregar participantes: ${escapeNotificationHTML(error.message)}</p>`;
+        return;
+      }
+
+      const userIds = new Set([
+        activeLeague.owner_id,
+        ...(members || []).map(m => m.user_id)
+      ]);
+
+      const ids = [...userIds].filter(Boolean);
+
+      if (ids.length === 0) {
+        container.innerHTML = `<p class="text-center text-sm text-slate-400 py-8">Nenhum participante encontrado.</p>`;
+        return;
+      }
+
+      const { data: profiles, error: profilesError } = await supabaseClient
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', ids);
+
+      if (profilesError) {
+        container.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Erro ao carregar perfis dos participantes.</p>`;
+        return;
+      }
+
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+      document.getElementById('leagueUsersCount').innerText = ids.length;
+
+      container.innerHTML = ids.map(userId => {
+        const profile = profileMap.get(userId);
+        const isOwner = userId === activeLeague.owner_id;
+        const username = profile?.username || 'Jogador';
+        const formattedUsername = username.startsWith('@') ? username : '@' + username;
+
+        const avatar = profile?.avatar_url
+          ? `<img src="${escapeNotificationHTML(profile.avatar_url)}" class="w-full h-full object-cover">`
+          : '👤';
+
+        return `
+          <div class="flex items-center gap-3 bg-white border border-slate-100 rounded-2xl p-3">
+            <div class="w-11 h-11 rounded-full bg-sky-50 flex items-center justify-center overflow-hidden text-xl">
+              ${avatar}
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <h4 class="text-sm font-black text-slate-800 truncate">
+                ${escapeNotificationHTML(formattedUsername)}
+              </h4>
+              <p class="text-[10px] text-slate-400">
+                ${isOwner ? 'Organizador da liga' : 'Participante'}
+              </p>
+            </div>
+
+            ${isOwner
+              ? `<span class="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg">👑 ADMIN</span>`
+              : `<span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">✓ MEMBRO</span>`
+            }
+          </div>
+        `;
+      }).join('');
     }
 
     // ==========================================
@@ -531,7 +927,7 @@
         .eq('user_id', currentUser.id);
 
       if (error) {
-        alert('Não foi possível atualizar a notificação.');
+        showFeedbackModal('Erro', 'Não foi possível atualizar a notificação.');
         return;
       }
 
@@ -546,7 +942,7 @@
         .eq('is_read', false);
 
       if (error) {
-        alert('Erro ao marcar notificações como lidas.');
+        showFeedbackModal('Erro', 'Erro ao marcar notificações como lidas.');
         return;
       }
 
@@ -601,7 +997,6 @@
         </div>
       `;
 
-      // Buscar ligas públicas
       const { data: leagues, error: leaguesError } = await supabaseClient
         .from('leagues')
         .select('*')
@@ -632,7 +1027,6 @@
         return;
       }
 
-      // Buscar solicitações feitas pelo usuário
       const { data: requests, error: requestsError } = await supabaseClient
         .from('league_requests')
         .select('league_id, status')
@@ -647,7 +1041,6 @@
         return;
       }
 
-      // Buscar ligas em que o usuário já participa
       const { data: memberships, error: membersError } = await supabaseClient
         .from('league_members')
         .select('league_id')
@@ -662,13 +1055,8 @@
         return;
       }
 
-      const requestMap = new Map(
-        (requests || []).map(r => [r.league_id, r.status])
-      );
-
-      const memberSet = new Set(
-        (memberships || []).map(m => m.league_id)
-      );
+      const requestMap = new Map((requests || []).map(r => [r.league_id, r.status]));
+      const memberSet = new Set((memberships || []).map(m => m.league_id));
 
       container.innerHTML = leagues.map(league => {
         const isMine = league.owner_id === currentUser.id;
@@ -679,36 +1067,31 @@
 
         if (isMine) {
           actionButton = `
-            <button disabled
-              class="bg-amber-100 text-amber-700 font-bold px-3 py-2 rounded-lg text-xs">
+            <button disabled class="bg-amber-100 text-amber-700 font-bold px-3 py-2 rounded-lg text-xs">
               👑 Sua liga
             </button>
           `;
         } else if (isMember || requestStatus === 'approved') {
           actionButton = `
-            <button disabled
-              class="bg-emerald-100 text-emerald-700 font-bold px-3 py-2 rounded-lg text-xs">
+            <button disabled class="bg-emerald-100 text-emerald-700 font-bold px-3 py-2 rounded-lg text-xs">
               ✓ Você já participa
             </button>
           `;
         } else if (requestStatus === 'pending') {
           actionButton = `
-            <button disabled
-              class="bg-amber-100 text-amber-700 font-bold px-3 py-2 rounded-lg text-xs">
+            <button disabled class="bg-amber-100 text-amber-700 font-bold px-3 py-2 rounded-lg text-xs">
               ⏳ Solicitação pendente
             </button>
           `;
         } else if (requestStatus === 'rejected') {
           actionButton = `
-            <button disabled
-              class="bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg text-xs">
+            <button disabled class="bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg text-xs">
               Solicitação recusada
             </button>
           `;
         } else {
           actionButton = `
-            <button
-              onclick="requestToJoin('${escapeNotificationHTML(league.id)}', this)"
+            <button onclick="requestToJoin('${escapeNotificationHTML(league.id)}', this)"
               class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-2 rounded-lg text-xs shadow-sm transition cursor-pointer">
               Solicitar participação
             </button>
@@ -746,18 +1129,13 @@
       }).join('');
     }
 
-    // ==========================================
-    // SOLICITAR PARTICIPAÇÃO EM UMA LIGA
-    // ==========================================
-
     async function requestToJoin(leagueId, button) {
       if (!currentUser) {
-        alert('Você precisa estar conectado para solicitar participação.');
+        showFeedbackModal('Atenção', 'Você precisa estar conectado para solicitar participação.');
         return;
       }
 
       const originalText = button.innerText;
-
       button.disabled = true;
       button.innerText = 'Enviando...';
 
@@ -769,7 +1147,7 @@
         .maybeSingle();
 
       if (checkError) {
-        alert('Erro ao verificar solicitação: ' + checkError.message);
+        showFeedbackModal('Erro', 'Erro ao verificar solicitação: ' + checkError.message);
         button.disabled = false;
         button.innerText = originalText;
         return;
@@ -777,11 +1155,11 @@
 
       if (existingRequest) {
         if (existingRequest.status === 'pending') {
-          alert('Você já possui uma solicitação aguardando aprovação.');
+          showFeedbackModal('Aviso', 'Você já possui uma solicitação aguardando aprovação.');
         } else if (existingRequest.status === 'approved') {
-          alert('Você já participa desta liga.');
+          showFeedbackModal('Aviso', 'Você já participa desta liga.');
         } else {
-          alert('Sua solicitação anterior foi recusada.');
+          showFeedbackModal('Aviso', 'Sua solicitação anterior foi recusada.');
         }
 
         await loadPublicTournaments();
@@ -797,13 +1175,17 @@
         });
 
       if (error) {
-        alert('Não foi possível enviar sua solicitação: ' + error.message);
+        showFeedbackModal('Erro', 'Não foi possível enviar sua solicitação: ' + error.message);
         button.disabled = false;
         button.innerText = originalText;
         return;
       }
 
-      alert('Solicitação enviada com sucesso! Aguarde a aprovação do organizador.');
+      showFeedbackModal(
+        'Solicitação enviada!',
+        'Sua solicitação foi enviada com sucesso! Aguarde a aprovação do organizador.'
+      );
+
       await loadPublicTournaments();
     }
 
@@ -955,13 +1337,6 @@
       }, 800);
     }
 
-    async function openLeaguePanelById(leagueId) {
-      const { data } = await supabaseClient.from('leagues').select('*').eq('id', leagueId).single();
-      if (data) {
-        alert(`Abrindo painel da liga: ${data.title}`);
-      }
-    }
-
     function previewAvatar(event) {
       const file = event.target.files[0];
       if (file) {
@@ -1055,7 +1430,7 @@
         mainView.classList.remove('hidden');
         toggleCreateTournamentModal(true);
       } else if (section === 'standings') {
-        alert("Funcionalidade de Classificação Geral em desenvolvimento!");
+        showFeedbackModal('Em desenvolvimento', 'Funcionalidade de Classificação Geral em desenvolvimento!');
         mainView.classList.remove('hidden');
       } else {
         mainView.classList.remove('hidden');
