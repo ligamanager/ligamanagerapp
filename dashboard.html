@@ -360,7 +360,6 @@
     let selectedAvatarBase64 = null;
     let notificationsChannel = null;
 
-    // Inicialização do Dashboard
     async function initDashboard() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) {
@@ -589,55 +588,228 @@
     }
 
     // ==========================================
-    // CARREGAR LIGAS (PÚBLICAS E MINHAS)
+    // CARREGAR CAMPEONATOS PÚBLICOS E SOLICITAÇÕES
     // ==========================================
 
     async function loadPublicTournaments() {
       const container = document.getElementById('tournamentsList');
       if (!container) return;
 
-      container.innerHTML = `<div class="col-span-full text-center py-8 text-xs text-slate-400 font-bold">Buscando campeonatos públicos...</div>`;
+      container.innerHTML = `
+        <div class="col-span-full text-center py-8 text-xs text-slate-400">
+          Buscando campeonatos públicos...
+        </div>
+      `;
 
-      const { data, error } = await supabaseClient
+      // Buscar ligas públicas
+      const { data: leagues, error: leaguesError } = await supabaseClient
         .from('leagues')
         .select('*')
         .eq('visibility', 'publica')
         .order('created_at', { ascending: false });
 
-      if (error || !data || data.length === 0) {
+      if (leaguesError) {
         container.innerHTML = `
-          <div class="col-span-full bg-white p-8 rounded-2xl border border-sky-100 text-center space-y-3">
-            <p class="text-slate-500 text-sm font-medium">Nenhum campeonato público encontrado no momento.</p>
-            <button onclick="toggleCreateTournamentModal(true)" class="text-sky-600 hover:text-sky-700 text-xs font-bold underline cursor-pointer">Criar liga pública</button>
+          <div class="col-span-full text-center py-8 text-sm text-red-500">
+            Erro ao carregar campeonatos: ${escapeNotificationHTML(leaguesError.message)}
           </div>
         `;
         return;
       }
 
-      container.innerHTML = data.map(t => {
-        const isMine = t.owner_id === currentUser.id;
+      if (!leagues || leagues.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-white p-8 rounded-2xl border border-sky-100 text-center space-y-3">
+            <p class="text-slate-500 text-sm font-medium">
+              Nenhum campeonato público encontrado no momento.
+            </p>
+            <button onclick="toggleCreateTournamentModal(true)"
+              class="text-sky-600 text-xs font-bold underline cursor-pointer">
+              Criar liga pública
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      // Buscar solicitações feitas pelo usuário
+      const { data: requests, error: requestsError } = await supabaseClient
+        .from('league_requests')
+        .select('league_id, status')
+        .eq('user_id', currentUser.id);
+
+      if (requestsError) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-8 text-sm text-red-500">
+            Erro ao consultar suas solicitações: ${escapeNotificationHTML(requestsError.message)}
+          </div>
+        `;
+        return;
+      }
+
+      // Buscar ligas em que o usuário já participa
+      const { data: memberships, error: membersError } = await supabaseClient
+        .from('league_members')
+        .select('league_id')
+        .eq('user_id', currentUser.id);
+
+      if (membersError) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-8 text-sm text-red-500">
+            Erro ao consultar suas participações: ${escapeNotificationHTML(membersError.message)}
+          </div>
+        `;
+        return;
+      }
+
+      const requestMap = new Map(
+        (requests || []).map(r => [r.league_id, r.status])
+      );
+
+      const memberSet = new Set(
+        (memberships || []).map(m => m.league_id)
+      );
+
+      container.innerHTML = leagues.map(league => {
+        const isMine = league.owner_id === currentUser.id;
+        const isMember = memberSet.has(league.id);
+        const requestStatus = requestMap.get(league.id);
+
+        let actionButton = '';
+
+        if (isMine) {
+          actionButton = `
+            <button disabled
+              class="bg-amber-100 text-amber-700 font-bold px-3 py-2 rounded-lg text-xs">
+              👑 Sua liga
+            </button>
+          `;
+        } else if (isMember || requestStatus === 'approved') {
+          actionButton = `
+            <button disabled
+              class="bg-emerald-100 text-emerald-700 font-bold px-3 py-2 rounded-lg text-xs">
+              ✓ Você já participa
+            </button>
+          `;
+        } else if (requestStatus === 'pending') {
+          actionButton = `
+            <button disabled
+              class="bg-amber-100 text-amber-700 font-bold px-3 py-2 rounded-lg text-xs">
+              ⏳ Solicitação pendente
+            </button>
+          `;
+        } else if (requestStatus === 'rejected') {
+          actionButton = `
+            <button disabled
+              class="bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg text-xs">
+              Solicitação recusada
+            </button>
+          `;
+        } else {
+          actionButton = `
+            <button
+              onclick="requestToJoin('${escapeNotificationHTML(league.id)}', this)"
+              class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-2 rounded-lg text-xs shadow-sm transition cursor-pointer">
+              Solicitar participação
+            </button>
+          `;
+        }
+
         return `
           <div class="bg-white border border-sky-100 rounded-2xl p-5 shadow-sm space-y-4 hover:border-sky-300 transition">
             <div class="flex items-start justify-between">
-              <span class="text-xs font-bold bg-sky-50 text-sky-600 px-2.5 py-1 rounded-lg border border-sky-100">${t.game || 'eFootball™ mobile'}</span>
-              <span class="text-[10px] font-black tracking-wider uppercase ${isMine ? 'bg-amber-500' : 'bg-slate-200 text-slate-700'} text-white px-2 py-0.5 rounded-md">
+              <span class="text-xs font-bold bg-sky-50 text-sky-600 px-2.5 py-1 rounded-lg border border-sky-100">
+                ${escapeNotificationHTML(league.game || 'eFootball™ mobile')}
+              </span>
+
+              <span class="text-[10px] font-black tracking-wider uppercase ${isMine ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-700'} px-2 py-1 rounded-md">
                 ${isMine ? '👑 ADMIN' : 'COMUNIDADE'}
               </span>
             </div>
+
             <div>
-              <h4 class="font-bold text-slate-800 text-base leading-snug">${t.title}</h4>
-              <p class="text-xs text-slate-400 font-medium mt-1">${t.description || 'Campeonato oficial da comunidade'}</p>
+              <h4 class="font-bold text-slate-800 text-base leading-snug">
+                ${escapeNotificationHTML(league.title)}
+              </h4>
+
+              <p class="text-xs text-slate-400 font-medium mt-1">
+                ${escapeNotificationHTML(league.description || 'Campeonato oficial da comunidade')}
+              </p>
             </div>
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span class="text-slate-400 font-medium">🌐 Pública</span>
-              <button onclick="openLeaguePanelById('${t.id}')" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer">
-                Ver Campeonato →
-              </button>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span class="text-xs text-slate-400 font-medium">🌐 Pública</span>
+              ${actionButton}
             </div>
           </div>
         `;
       }).join('');
     }
+
+    // ==========================================
+    // SOLICITAR PARTICIPAÇÃO EM UMA LIGA
+    // ==========================================
+
+    async function requestToJoin(leagueId, button) {
+      if (!currentUser) {
+        alert('Você precisa estar conectado para solicitar participação.');
+        return;
+      }
+
+      const originalText = button.innerText;
+
+      button.disabled = true;
+      button.innerText = 'Enviando...';
+
+      const { data: existingRequest, error: checkError } = await supabaseClient
+        .from('league_requests')
+        .select('id, status')
+        .eq('league_id', leagueId)
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (checkError) {
+        alert('Erro ao verificar solicitação: ' + checkError.message);
+        button.disabled = false;
+        button.innerText = originalText;
+        return;
+      }
+
+      if (existingRequest) {
+        if (existingRequest.status === 'pending') {
+          alert('Você já possui uma solicitação aguardando aprovação.');
+        } else if (existingRequest.status === 'approved') {
+          alert('Você já participa desta liga.');
+        } else {
+          alert('Sua solicitação anterior foi recusada.');
+        }
+
+        await loadPublicTournaments();
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from('league_requests')
+        .insert({
+          league_id: leagueId,
+          user_id: currentUser.id,
+          status: 'pending'
+        });
+
+      if (error) {
+        alert('Não foi possível enviar sua solicitação: ' + error.message);
+        button.disabled = false;
+        button.innerText = originalText;
+        return;
+      }
+
+      alert('Solicitação enviada com sucesso! Aguarde a aprovação do organizador.');
+      await loadPublicTournaments();
+    }
+
+    // ==========================================
+    // CARREGAR MINHAS LIGAS (Criadas + Participante)
+    // ==========================================
 
     async function loadMyLeagues() {
       const container = document.getElementById('myLeaguesList');
@@ -645,13 +817,11 @@
 
       container.innerHTML = `<div class="col-span-full text-center py-8 text-xs text-slate-400 font-bold">Carregando suas ligas da nuvem...</div>`;
 
-      // 1. Ligas criadas pelo usuário
       const { data: ownedLeagues } = await supabaseClient
         .from('leagues')
         .select('*')
         .eq('owner_id', currentUser.id);
 
-      // 2. Ligas em que o usuário participa via league_members
       const { data: memberRows } = await supabaseClient
         .from('league_members')
         .select('league_id')
@@ -693,7 +863,7 @@
               </span>
             </div>
             <div>
-              <h4 class="font-bold text-slate-800 text-base leading-snug">${t.title}</h4>
+              <h4 class="font-bold text-slate-800 text-base leading-snug">${escapeNotificationHTML(t.title)}</h4>
               <p class="text-xs text-slate-400 font-medium mt-1">Times: ${t.teams ? t.teams.length : 0} participantes</p>
               
               ${isOrganizer ? `
