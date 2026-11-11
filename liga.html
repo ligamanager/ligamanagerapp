@@ -1,357 +1,956 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Liga Manager | Liga</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d18">
+  <title>Liga Manager — Competição</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { background: #080d18; color: #e5e7eb; }
-    .panel { background: rgba(17, 26, 43, .92); border: 1px solid rgba(148,163,184,.15); }
-    .muted { color: #94a3b8; }
-    .btn { border-radius: .75rem; padding: .65rem 1rem; font-weight: 700; transition: .15s; }
-    .btn:disabled { opacity: .45; cursor: not-allowed; }
-    .btn-primary { background: #7c3aed; color: white; }
-    .btn-primary:hover { background: #6d28d9; }
-    .btn-secondary { background: #263449; color: #e2e8f0; }
-    .btn-secondary:hover { background: #334155; }
-    .btn-danger { background: #991b1b; color: white; }
-    .field { width: 100%; border: 1px solid #334155; background: #0b1424; color: white; border-radius: .75rem; padding: .7rem .85rem; }
-    .field:focus { outline: 2px solid #8b5cf6; border-color: transparent; }
+    :root { color-scheme: dark; }
+    body { background: #080d18; color: #eef3ff; }
+    .panel { background: #111a2b; border: 1px solid #24324a; }
+    .muted { color: #9aabc5; }
+    .btn {
+      background: #2563eb; color: white; border-radius: 12px;
+      padding: 10px 15px; font-weight: 700;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn-ghost {
+      border: 1px solid #34445f; border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .field {
+      width: 100%; background: #0b1220; border: 1px solid #34445f;
+      border-radius: 10px; padding: 11px; color: white; outline: none;
+    }
+    .field:focus { border-color: #3b82f6; }
+    .tab {
+      padding: 11px 15px; border-bottom: 2px solid transparent;
+      color: #9aabc5;
+    }
+    .tab.active { color: white; border-color: #3b82f6; }
+    .modal-bg { background: rgba(0,0,0,.72); }
+    .hidden { display: none !important; }
   </style>
 </head>
+
 <body class="min-h-screen">
-  <header class="border-b border-slate-800 bg-slate-950/80">
-    <div class="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
-      <a href="dashboard.html" class="font-black tracking-wide text-xl"><span class="text-violet-400">LIGA</span> MANAGER</a>
-      <div class="flex items-center gap-3">
-        <span id="userLabel" class="hidden text-sm muted sm:inline"></span>
-        <a href="dashboard.html" class="btn btn-secondary text-sm">Voltar ao painel</a>
+
+<header class="border-b border-slate-800 bg-slate-950/80">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+    <a href="dashboard.html" class="font-black text-xl tracking-tight">
+      LIGA <span class="text-blue-500">MANAGER</span>
+    </a>
+
+    <div class="flex items-center gap-3">
+      <span id="userLabel" class="text-sm muted hidden sm:inline"></span>
+      <button id="logoutBtn" class="btn-ghost text-sm">Sair</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-7">
+
+  <a href="dashboard.html" class="text-blue-400 text-sm hover:underline">
+    ← Voltar ao painel
+  </a>
+
+  <div id="loading" class="panel rounded-2xl p-8 mt-5 text-center muted">
+    Carregando competição...
+  </div>
+
+  <div id="errorBox" class="hidden panel rounded-2xl p-8 mt-5 text-center">
+    <h2 class="text-xl font-bold mb-2">
+      Não foi possível abrir esta competição
+    </h2>
+    <p id="errorText" class="muted mb-5"></p>
+    <a href="dashboard.html" class="btn inline-block">Voltar ao painel</a>
+  </div>
+
+  <section id="leagueContent" class="hidden">
+
+    <!-- CABEÇALHO DA COMPETIÇÃO -->
+    <div class="panel rounded-2xl overflow-hidden mt-5">
+
+      <div id="leagueBanner"
+           class="h-40 sm:h-56 bg-gradient-to-r from-blue-950 via-blue-800 to-slate-900 relative">
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 to-transparent"></div>
+      </div>
+
+      <div class="p-5 sm:p-7">
+
+        <div class="flex flex-col sm:flex-row gap-4 sm:items-end">
+
+          <div id="leagueLogo"
+               class="-mt-16 w-24 h-24 rounded-2xl border-4 border-slate-900 bg-slate-800 flex items-center justify-center text-3xl font-black relative z-10">
+            LM
+          </div>
+
+          <div class="flex-1 min-w-0">
+
+            <div class="flex flex-wrap gap-2 items-center mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-300 bg-blue-500/10 px-2 py-1 rounded-full">
+                Competição
+              </span>
+              <span id="visibilityLabel" class="text-xs muted"></span>
+            </div>
+
+            <h1 id="leagueTitle"
+                class="text-2xl sm:text-3xl font-black break-words">
+              —
+            </h1>
+
+            <p id="leagueDescription" class="muted mt-2 whitespace-pre-wrap"></p>
+          </div>
+
+          <div id="adminActions" class="hidden flex-wrap gap-2">
+            <button id="addTeamBtn" class="btn">
+              + Cadastrar equipe
+            </button>
+          </div>
+
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
+
+          <div class="rounded-xl bg-slate-950/60 p-3">
+            <p class="text-xs muted">Código da liga</p>
+            <p id="leagueCode" class="font-bold mt-1">—</p>
+          </div>
+
+          <div class="rounded-xl bg-slate-950/60 p-3">
+            <p class="text-xs muted">Criada em</p>
+            <p id="createdAt" class="font-bold mt-1">—</p>
+          </div>
+
+          <div class="rounded-xl bg-slate-950/60 p-3 col-span-2 sm:col-span-1">
+            <p class="text-xs muted">Equipes</p>
+            <p id="teamCount" class="font-bold mt-1">0</p>
+          </div>
+
+        </div>
       </div>
     </div>
-  </header>
 
-  <main class="mx-auto max-w-6xl px-4 py-8">
-    <div id="pageMessage" class="mb-5 hidden rounded-xl border px-4 py-3 text-sm" role="status"></div>
+    <!-- NAVEGAÇÃO -->
+    <nav class="flex gap-2 border-b border-slate-800 mt-7 overflow-x-auto">
 
-    <section class="panel overflow-hidden rounded-2xl">
-      <div class="h-36 bg-gradient-to-r from-violet-950 via-indigo-900 to-slate-900"></div>
-      <div class="p-6 md:p-8">
-        <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div class="min-w-0">
-            <p class="mb-2 text-xs font-bold uppercase tracking-[.2em] text-violet-300">Página da competição</p>
-            <h1 id="leagueTitle" class="break-words text-3xl font-black md:text-4xl">Carregando liga...</h1>
-            <p id="leagueDescription" class="mt-3 max-w-3xl muted">Buscando informações da competição.</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <span id="leagueVisibility" class="rounded-full bg-slate-800 px-3 py-1.5 text-xs font-bold">—</span>
-            <span id="leagueCode" class="rounded-full bg-slate-800 px-3 py-1.5 text-xs font-bold">Código: —</span>
-          </div>
-        </div>
-        <div class="mt-7 grid grid-cols-2 gap-3 md:grid-cols-3">
-          <div class="rounded-xl bg-slate-900/80 p-4"><p class="text-xs muted">Participantes</p><p id="memberCount" class="mt-1 text-2xl font-black">—</p></div>
-          <div class="rounded-xl bg-slate-900/80 p-4"><p class="text-xs muted">Solicitações pendentes</p><p id="requestCount" class="mt-1 text-2xl font-black">—</p></div>
-          <div class="col-span-2 rounded-xl bg-slate-900/80 p-4 md:col-span-1"><p class="text-xs muted">Sua função</p><p id="myRole" class="mt-1 text-lg font-black">—</p></div>
+      <button class="tab active" data-tab="teams">
+        Equipes
+      </button>
+
+      <button class="tab" data-tab="offers">
+        Ofertas para mim
+        <span id="offerBadge" class="text-blue-400"></span>
+      </button>
+
+      <button class="tab" data-tab="about">
+        Sobre a competição
+      </button>
+
+    </nav>
+
+    <!-- ABA EQUIPES -->
+    <section id="tab-teams" class="py-6">
+
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-xl font-bold">Equipes participantes</h2>
+          <p class="muted text-sm">
+            Equipes e seus técnicos principais.
+          </p>
         </div>
       </div>
+
+      <div id="teamsList" class="grid sm:grid-cols-2 gap-4"></div>
+
+      <div id="emptyTeams" class="hidden panel rounded-2xl p-8 text-center">
+        <div class="text-4xl mb-3">🏆</div>
+        <h3 class="font-bold text-lg">Nenhuma equipe cadastrada</h3>
+        <p class="muted text-sm mt-1">
+          O organizador ainda não adicionou equipes a esta competição.
+        </p>
+      </div>
+
     </section>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
-      <section class="panel rounded-2xl p-6">
-        <div class="flex items-center justify-between gap-3">
-          <div><h2 class="text-xl font-extrabold">Participantes</h2><p class="mt-1 text-sm muted">Jogadores que fazem parte desta liga.</p></div>
-          <button id="refreshButton" class="btn btn-secondary text-sm">Atualizar</button>
-        </div>
-        <div id="membersList" class="mt-5 space-y-3">
-          <p class="muted text-sm">Carregando participantes...</p>
-        </div>
-        <div id="joinArea" class="mt-6 border-t border-slate-800 pt-5 hidden">
-          <h3 class="font-bold">Quer participar desta liga?</h3>
-          <p class="mt-1 text-sm muted">Envie uma solicitação para o organizador analisar.</p>
-          <button id="joinButton" class="btn btn-primary mt-3">Solicitar entrada</button>
-        </div>
-      </section>
+    <!-- ABA OFERTAS -->
+    <section id="tab-offers" class="hidden py-6">
 
-      <aside class="space-y-6">
-        <section class="panel rounded-2xl p-6">
-          <h2 class="text-xl font-extrabold">Área do organizador</h2>
-          <p id="adminHint" class="mt-1 text-sm muted">As ferramentas de organização aparecem para o administrador da liga.</p>
-          <div id="requestsArea" class="mt-5 hidden">
-            <div class="flex items-center justify-between"><h3 class="font-bold">Solicitações de entrada</h3><span id="pendingBadge" class="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-bold text-amber-300">0 pendentes</span></div>
-            <div id="requestsList" class="mt-3 space-y-3"></div>
-          </div>
-        </section>
+      <h2 class="text-xl font-bold mb-1">Ofertas de técnico</h2>
 
-        <section class="panel rounded-2xl p-6">
-          <h2 class="text-xl font-extrabold">Próximas etapas</h2>
-          <p class="mt-2 text-sm muted">Esta primeira versão organiza a liga e seus participantes. O módulo de times e técnicos será conectado depois que criarmos as tabelas próprias no Supabase.</p>
-          <ul class="mt-4 space-y-2 text-sm">
-            <li class="flex gap-2"><span class="text-violet-400">◆</span> Cadastro de times pelo organizador</li>
-            <li class="flex gap-2"><span class="text-violet-400">◆</span> Convite para técnico principal</li>
-            <li class="flex gap-2"><span class="text-violet-400">◆</span> Aceite e assinatura digital do contrato</li>
-            <li class="flex gap-2"><span class="text-violet-400">◆</span> Histórico de equipes e colocações</li>
-          </ul>
-        </section>
-      </aside>
+      <p class="muted text-sm mb-4">
+        As ofertas enviadas ao seu perfil aparecem aqui.
+      </p>
+
+      <div id="offersList" class="space-y-3"></div>
+
+      <div id="emptyOffers" class="panel rounded-2xl p-7 text-center muted">
+        Você não tem ofertas pendentes nesta competição.
+      </div>
+
+    </section>
+
+    <!-- ABA SOBRE -->
+    <section id="tab-about" class="hidden py-6">
+
+      <div class="panel rounded-2xl p-5">
+
+        <h2 class="text-xl font-bold mb-3">
+          Sobre esta competição
+        </h2>
+
+        <p id="aboutDescription" class="muted whitespace-pre-wrap">
+          Sem descrição informada.
+        </p>
+
+        <div class="border-t border-slate-700 mt-5 pt-4 text-sm muted">
+          Organizada pelo administrador da competição.
+        </div>
+
+      </div>
+
+    </section>
+
+  </section>
+</main>
+
+<!-- MODAL CADASTRAR EQUIPE -->
+<div id="teamModal"
+     class="hidden fixed inset-0 z-50 modal-bg items-center justify-center p-4">
+
+  <div class="panel rounded-2xl p-6 w-full max-w-md">
+
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="text-xl font-bold">Cadastrar equipe</h2>
+      <button class="closeModal text-2xl muted" data-close="teamModal">×</button>
     </div>
-  </main>
 
-  <footer class="mx-auto max-w-6xl px-4 py-8 text-center text-xs muted">Liga Manager · Gestão de competições</footer>
+    <form id="teamForm" class="space-y-4">
+
+      <div>
+        <label class="block text-sm mb-2">Nome da equipe</label>
+        <input id="teamName" class="field" maxlength="60"
+               required placeholder="Ex.: Real Madrid">
+      </div>
+
+      <div>
+        <label class="block text-sm mb-2">
+          URL do escudo (opcional)
+        </label>
+        <input id="teamLogo" class="field" type="url"
+               placeholder="https://...">
+      </div>
+
+      <p class="text-xs muted">
+        Nesta etapa, o escudo deve estar hospedado em uma URL pública.
+      </p>
+
+      <div id="teamError" class="text-sm text-red-400"></div>
+
+      <div class="flex gap-2 justify-end">
+        <button type="button" class="btn-ghost closeModal"
+                data-close="teamModal">
+          Cancelar
+        </button>
+        <button class="btn" type="submit">Salvar equipe</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- MODAL CONVIDAR TÉCNICO -->
+<div id="coachModal"
+     class="hidden fixed inset-0 z-50 modal-bg items-center justify-center p-4">
+
+  <div class="panel rounded-2xl p-6 w-full max-w-md">
+
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="text-xl font-bold">Convidar técnico</h2>
+      <button class="closeModal text-2xl muted" data-close="coachModal">×</button>
+    </div>
+
+    <form id="coachForm" class="space-y-4">
+
+      <input id="coachTeamId" type="hidden">
+
+      <p id="coachTeamName" class="text-sm text-blue-300"></p>
+
+      <div>
+        <label class="block text-sm mb-2">
+          Usuário do técnico
+        </label>
+        <input id="coachUsername" class="field" required
+               placeholder="@usuario">
+      </div>
+
+      <p class="text-xs muted">
+        A pessoa receberá uma oferta para assumir como técnico principal desta equipe.
+      </p>
+
+      <div id="coachError" class="text-sm text-red-400"></div>
+
+      <div class="flex gap-2 justify-end">
+        <button type="button" class="btn-ghost closeModal"
+                data-close="coachModal">
+          Cancelar
+        </button>
+        <button class="btn" type="submit">Enviar oferta</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- MODAL ENCERRAR NOMEAÇÃO -->
+<div id="endModal"
+     class="hidden fixed inset-0 z-50 modal-bg items-center justify-center p-4">
+
+  <div class="panel rounded-2xl p-6 w-full max-w-md">
+
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="text-xl font-bold">Encerrar nomeação</h2>
+      <button class="closeModal text-2xl muted" data-close="endModal">×</button>
+    </div>
+
+    <form id="endForm" class="space-y-4">
+
+      <input id="appointmentId" type="hidden">
+
+      <div>
+        <label class="block text-sm mb-2">Motivo</label>
+
+        <select id="endReason" class="field" required>
+          <option value="competition_ended">Competição encerrada</option>
+          <option value="eliminated">Equipe eliminada</option>
+          <option value="administrative_removal">Remoção administrativa</option>
+          <option value="unsatisfactory_performance">Desempenho insatisfatório</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-2">
+          Posição final (opcional)
+        </label>
+        <input id="finalPosition" class="field" type="number"
+               min="1" placeholder="Ex.: 3">
+      </div>
+
+      <div>
+        <label class="block text-sm mb-2">
+          Fase alcançada (opcional)
+        </label>
+        <input id="finalStage" class="field" maxlength="80"
+               placeholder="Ex.: Semifinal">
+      </div>
+
+      <p class="text-xs muted">
+        O registro ficará preservado no histórico do técnico.
+      </p>
+
+      <div id="endError" class="text-sm text-red-400"></div>
+
+      <div class="flex gap-2 justify-end">
+        <button type="button" class="btn-ghost closeModal"
+                data-close="endModal">
+          Cancelar
+        </button>
+        <button class="btn" type="submit">
+          Confirmar encerramento
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- AVISOS -->
+<div id="toast"
+     class="fixed bottom-5 left-1/2 -translate-x-1/2 hidden z-[70] bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-xl text-sm">
+</div>
 
 <script>
-  // A chave publishable/anon pode ficar no navegador. Nunca coloque a service_role aqui.
-  const SUPABASE_URL = 'https://rhymsnkxlieqzdruirdc.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+(() => {
 
-  const params = new URLSearchParams(window.location.search);
-  const leagueId = params.get('id');
-  let currentUser = null;
-  let currentLeague = null;
+  const SUPABASE_URL =
+    'https://rhymsnkxlieqzdruirdc.supabase.co';
+
+  const SUPABASE_KEY =
+    'sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
+
+  const db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  const $ = id => document.getElementById(id);
+
+  let user = null;
+  let league = null;
   let isAdmin = false;
-  let isMember = false;
-  let myRequest = null;
+  let teams = [];
+  let appointments = [];
+  let offers = [];
 
-  const $ = (id) => document.getElementById(id);
+  function toast(message) {
+    $('toast').textContent = message;
+    $('toast').classList.remove('hidden');
 
-  function showMessage(message, type = 'info') {
-    const el = $('pageMessage');
-    el.textContent = message;
-    el.className = 'mb-5 rounded-xl border px-4 py-3 text-sm';
-    if (type === 'error') el.classList.add('border-red-500/40', 'bg-red-950/50', 'text-red-200');
-    else if (type === 'success') el.classList.add('border-emerald-500/40', 'bg-emerald-950/50', 'text-emerald-200');
-    else el.classList.add('border-sky-500/40', 'bg-sky-950/50', 'text-sky-200');
+    setTimeout(() => {
+      $('toast').classList.add('hidden');
+    }, 3200);
+  }
+
+  function showError(message) {
+    $('loading').classList.add('hidden');
+    $('leagueContent').classList.add('hidden');
+    $('errorText').textContent = message;
+    $('errorBox').classList.remove('hidden');
+  }
+
+  function openModal(id) {
+    const el = $(id);
     el.classList.remove('hidden');
+    el.classList.add('flex');
   }
 
-  function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-    }[char]));
+  function closeModal(id) {
+    const el = $(id);
+    el.classList.add('hidden');
+    el.classList.remove('flex');
   }
 
-  function initials(value) {
-    const text = String(value || '?').trim();
-    return text.slice(0, 2).toUpperCase();
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[c]));
   }
 
-  async function loadPage() {
-    if (!leagueId) {
-      showMessage('O endereço desta página não contém o ID da liga. Abra a liga pelo painel.', 'error');
-      $('leagueTitle').textContent = 'Liga não identificada';
+  function date(value) {
+    if (!value) return '—';
+
+    return new Date(value).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  }
+
+  function reasonLabel(reason) {
+    return ({
+      competition_ended: 'Competição encerrada',
+      eliminated: 'Equipe eliminada',
+      administrative_removal: 'Remoção administrativa',
+      unsatisfactory_performance: 'Desempenho insatisfatório'
+    })[reason] || reason || '—';
+  }
+
+  // CARREGAR COMPETIÇÃO
+  async function load() {
+
+    const {
+      data: { user: currentUser },
+      error: authError
+    } = await db.auth.getUser();
+
+    if (authError || !currentUser) {
+      location.href = 'login.html';
       return;
     }
 
-    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-    if (sessionError) {
-      showMessage('Não foi possível verificar seu acesso: ' + sessionError.message, 'error');
-      return;
-    }
-    currentUser = sessionData.session?.user || null;
-    if (!currentUser) {
-      showMessage('Você precisa entrar na sua conta para visualizar esta liga. Faça login e abra o link novamente.', 'error');
-      return;
-    }
+    user = currentUser;
 
-    $('userLabel').textContent = currentUser.email || 'Conta conectada';
-
-    const { data: league, error: leagueError } = await supabaseClient
-      .from('leagues')
-      .select('id,title,description,code,owner_id,visibility,created_at')
-      .eq('id', leagueId)
-      .single();
-
-    if (leagueError || !league) {
-      showMessage('Não foi possível carregar esta liga. Confira o link e as permissões do Supabase.' + (leagueError?.message ? ' Detalhe: ' + leagueError.message : ''), 'error');
-      $('leagueTitle').textContent = 'Liga não encontrada';
-      return;
-    }
-    currentLeague = league;
-    $('leagueTitle').textContent = league.title || 'Liga sem título';
-    $('leagueDescription').textContent = league.description || 'Esta liga ainda não possui uma descrição.';
-    $('leagueVisibility').textContent = league.visibility || 'visibilidade não definida';
-    $('leagueCode').textContent = 'Código: ' + (league.code || '—');
-
-    const { data: myMembership, error: myMembershipError } = await supabaseClient
-      .from('league_members')
-      .select('id,role')
-      .eq('league_id', leagueId)
-      .eq('user_id', currentUser.id)
+    const { data: profile } = await db
+      .from('profiles')
+      .select('username')
+      .eq('id', user.id)
       .maybeSingle();
 
-    if (myMembershipError) console.warn('Verificação de participação:', myMembershipError.message);
-    isMember = !!myMembership;
-    isAdmin = league.owner_id === currentUser.id || myMembership?.role === 'admin';
-    $('myRole').textContent = isAdmin ? 'Organizador' : (isMember ? 'Participante' : 'Visitante');
+    $('userLabel').textContent = profile?.username
+      ? '@' + profile.username
+      : (user.email || '');
 
-    const { data: requestData } = await supabaseClient
-      .from('league_requests')
-      .select('id,status')
-      .eq('league_id', leagueId)
-      .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
-    myRequest = requestData?.[0] || null;
+    const id = new URLSearchParams(location.search).get('id');
 
-    $('joinArea').classList.toggle('hidden', isMember || isAdmin);
-    if (!isMember && !isAdmin) {
-      const joinButton = $('joinButton');
-      if (myRequest?.status === 'pending') {
-        joinButton.textContent = 'Solicitação enviada';
-        joinButton.disabled = true;
-      } else if (myRequest?.status === 'approved') {
-        joinButton.textContent = 'Solicitação aprovada — atualize a página';
-        joinButton.disabled = true;
-      } else {
-        joinButton.textContent = myRequest?.status === 'rejected' ? 'Solicitar novamente' : 'Solicitar entrada';
-        joinButton.disabled = false;
-      }
-    }
-
-    await loadMembers();
-    if (isAdmin) await loadRequests();
-  }
-
-  async function loadMembers() {
-    const { data: members, error } = await supabaseClient
-      .from('league_members')
-      .select('id,user_id,role,joined_at')
-      .eq('league_id', leagueId)
-      .order('joined_at', { ascending: true });
-
-    if (error) {
-      $('membersList').innerHTML = '<p class="text-sm text-red-300">Não foi possível carregar os participantes: ' + escapeHtml(error.message) + '</p>';
+    if (!id) {
+      showError(
+        'O endereço não contém o identificador da competição. Abra a liga pelo painel.'
+      );
       return;
     }
 
-    $('memberCount').textContent = members?.length || 0;
-    if (!members?.length) {
-      $('membersList').innerHTML = '<p class="rounded-xl bg-slate-900 p-4 text-sm muted">Ainda não há participantes cadastrados nesta liga.</p>';
+    const { data: found, error } = await db
+      .from('leagues')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !found) {
+      showError(
+        'Competição não encontrada ou você não tem permissão para visualizá-la.'
+      );
       return;
     }
 
-    const userIds = [...new Set(members.map(member => member.user_id))];
-    const { data: profiles, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('id,username,gamertag,avatar_url')
-      .in('id', userIds);
+    league = found;
 
-    if (profileError) console.warn('Perfis não puderam ser carregados:', profileError.message);
-    const profileMap = new Map((profiles || []).map(profile => [profile.id, profile]));
+    isAdmin = league.owner_id === user.id;
 
-    $('membersList').innerHTML = members.map(member => {
-      const profile = profileMap.get(member.user_id);
-      const username = profile?.username ? '@' + profile.username : 'Participante';
-      const gamertag = profile?.gamertag || '';
-      const role = member.role === 'admin' ? 'Administrador' : 'Jogador';
-      const avatar = profile?.avatar_url
-        ? `<img src="${escapeHtml(profile.avatar_url)}" alt="" class="h-11 w-11 rounded-full object-cover">`
-        : `<div class="flex h-11 w-11 items-center justify-center rounded-full bg-violet-900 font-black text-violet-200">${escapeHtml(initials(profile?.username))}</div>`;
-      return `<div class="flex items-center gap-3 rounded-xl bg-slate-900/80 p-3">
-        ${avatar}
-        <div class="min-w-0 flex-1"><p class="truncate font-bold">${escapeHtml(username)}</p><p class="truncate text-xs muted">${escapeHtml(gamertag || role)}</p></div>
-        <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs muted">${escapeHtml(role)}</span>
-      </div>`;
-    }).join('');
+    if (!isAdmin) {
+
+      const { data: membership } = await db
+        .from('league_members')
+        .select('role')
+        .eq('league_id', league.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      isAdmin = membership?.role === 'admin';
+    }
+
+    renderLeague();
+
+    $('loading').classList.add('hidden');
+    $('leagueContent').classList.remove('hidden');
+
+    if (isAdmin) {
+      $('adminActions').classList.remove('hidden');
+    }
+
+    await loadTeams();
+    await loadOffers();
   }
 
-  async function loadRequests() {
-    $('requestsArea').classList.remove('hidden');
-    $('adminHint').textContent = 'Você é organizador desta liga e pode analisar os pedidos de entrada.';
-    const { data: requests, error } = await supabaseClient
-      .from('league_requests')
-      .select('id,user_id,status,created_at')
-      .eq('league_id', leagueId)
-      .eq('status', 'pending')
+  // EXIBIR DADOS DA LIGA
+  function renderLeague() {
+
+    $('leagueTitle').textContent =
+      league.title || 'Competição sem título';
+
+    $('leagueDescription').textContent =
+      league.description || 'Bem-vindo à página oficial desta competição.';
+
+    $('aboutDescription').textContent =
+      league.description || 'Sem descrição informada.';
+
+    $('leagueCode').textContent = league.code || '—';
+
+    $('createdAt').textContent = date(league.created_at);
+
+    $('visibilityLabel').textContent =
+      league.visibility === 'privada' ? 'Privada' : 'Pública';
+
+    // O schema atual ainda não possui colunas de logo e banner.
+    $('leagueLogo').textContent =
+      (league.title || 'LM').trim().slice(0, 2).toUpperCase();
+  }
+
+  // CARREGAR EQUIPES E TÉCNICOS
+  async function loadTeams() {
+
+    const {
+      data: teamRows,
+      error: teamError
+    } = await db
+      .from('teams')
+      .select('*')
+      .eq('league_id', league.id)
       .order('created_at', { ascending: true });
 
-    if (error) {
-      $('requestsList').innerHTML = '<p class="text-sm text-red-300">Erro ao carregar solicitações: ' + escapeHtml(error.message) + '</p>';
-      return;
-    }
-    $('requestCount').textContent = requests?.length || 0;
-    $('pendingBadge').textContent = (requests?.length || 0) + ' pendentes';
-
-    if (!requests?.length) {
-      $('requestsList').innerHTML = '<p class="rounded-xl bg-slate-900 p-4 text-sm muted">Nenhuma solicitação pendente.</p>';
+    if (teamError) {
+      toast('Não foi possível carregar as equipes: ' + teamError.message);
       return;
     }
 
-    const userIds = [...new Set(requests.map(request => request.user_id))];
-    const { data: profiles } = await supabaseClient.from('profiles').select('id,username,gamertag').in('id', userIds);
-    const profileMap = new Map((profiles || []).map(profile => [profile.id, profile]));
+    teams = teamRows || [];
 
-    $('requestsList').innerHTML = requests.map(request => {
-      const profile = profileMap.get(request.user_id);
-      const name = profile?.username ? '@' + profile.username : 'Usuário';
-      return `<div class="rounded-xl bg-slate-900 p-4" data-request="${escapeHtml(request.id)}">
-        <div class="mb-3"><p class="font-bold">${escapeHtml(name)}</p><p class="text-xs muted">${escapeHtml(profile?.gamertag || 'Solicitou entrada na liga')}</p></div>
-        <div class="flex gap-2"><button class="btn btn-primary flex-1 text-sm" data-action="approve" data-id="${escapeHtml(request.id)}" data-user="${escapeHtml(request.user_id)}">Aprovar</button><button class="btn btn-danger flex-1 text-sm" data-action="reject" data-id="${escapeHtml(request.id)}">Recusar</button></div>
-      </div>`;
-    }).join('');
+    const {
+      data: appointmentRows,
+      error: appointmentError
+    } = await db
+      .from('coach_appointments')
+      .select('*')
+      .eq('league_id', league.id)
+      .eq('status', 'active');
+
+    if (appointmentError) {
+      toast('Não foi possível carregar os técnicos.');
+    }
+
+    appointments = appointmentRows || [];
+
+    renderTeams();
   }
 
-  async function requestToJoin() {
-    if (!currentUser || !currentLeague) return;
-    $('joinButton').disabled = true;
-    const { error } = await supabaseClient.from('league_requests').insert({
-      league_id: leagueId,
-      user_id: currentUser.id,
-      status: 'pending'
+  function renderTeams() {
+
+    $('teamCount').textContent = teams.length;
+
+    $('teamsList').innerHTML = '';
+
+    $('emptyTeams').classList.toggle(
+      'hidden',
+      teams.length !== 0
+    );
+
+    teams.forEach(team => {
+
+      const appointment = appointments.find(
+        a => a.team_id === team.id
+      );
+
+      const logo = team.logo_url
+        ? `<img src="${esc(team.logo_url)}" alt=""
+             class="w-14 h-14 rounded-xl object-cover bg-slate-800"
+             onerror="this.style.display='none'">`
+        : `<div class="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-xl">⚽</div>`;
+
+      const coach = appointment
+        ? `<div class="text-sm mt-3">
+             <span class="muted">Técnico principal:</span>
+             <strong>@${esc(appointment.coach_username)}</strong>
+           </div>`
+        : `<div class="text-sm mt-3 muted">
+             Técnico principal ainda não definido
+           </div>`;
+
+      const adminButtons = isAdmin
+        ? `<div class="flex flex-wrap gap-2 mt-4">
+             <button class="btn-ghost text-sm"
+               data-invite="${team.id}"
+               data-name="${esc(team.name)}">
+               Convidar técnico
+             </button>
+
+             ${appointment
+               ? `<button class="btn-ghost text-sm text-red-300"
+                    data-end="${appointment.id}">
+                    Encerrar nomeação
+                  </button>`
+               : ''}
+           </div>`
+        : '';
+
+      $('teamsList').insertAdjacentHTML(
+        'beforeend',
+        `<article class="panel rounded-2xl p-4">
+          <div class="flex items-center gap-3">
+            ${logo}
+            <div class="min-w-0">
+              <h3 class="font-bold text-lg break-words">
+                ${esc(team.name)}
+              </h3>
+              <p class="text-xs muted">Equipe participante</p>
+            </div>
+          </div>
+          ${coach}
+          ${adminButtons}
+        </article>`
+      );
     });
-    if (error) {
-      showMessage('Não foi possível enviar a solicitação: ' + error.message, 'error');
-      $('joinButton').disabled = false;
-      return;
-    }
-    showMessage('Solicitação enviada! O organizador poderá aprovar sua entrada.', 'success');
-    await loadPage();
-  }
 
-  async function reviewRequest(requestId, userId, decision) {
-    const requestCard = document.querySelector(`[data-request="${CSS.escape(requestId)}"]`);
-    const buttons = requestCard?.querySelectorAll('button');
-    buttons?.forEach(button => button.disabled = true);
+    document.querySelectorAll('[data-invite]').forEach(btn => {
 
-    if (decision === 'approve') {
-      const { error: memberError } = await supabaseClient.from('league_members').insert({
-        league_id: leagueId,
-        user_id: userId,
-        role: 'player'
+      btn.addEventListener('click', () => {
+
+        $('coachTeamId').value = btn.dataset.invite;
+
+        $('coachTeamName').textContent =
+          'Equipe: ' + btn.dataset.name;
+
+        $('coachUsername').value = '';
+        $('coachError').textContent = '';
+
+        openModal('coachModal');
       });
-      if (memberError && !String(memberError.message).toLowerCase().includes('duplicate')) {
-        showMessage('Não foi possível adicionar o participante: ' + memberError.message, 'error');
-        buttons?.forEach(button => button.disabled = false);
-        return;
-      }
-    }
+    });
 
-    const { error: updateError } = await supabaseClient
-      .from('league_requests')
-      .update({ status: decision === 'approve' ? 'approved' : 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: currentUser.id })
-      .eq('id', requestId)
-      .eq('status', 'pending');
+    document.querySelectorAll('[data-end]').forEach(btn => {
 
-    if (updateError) {
-      showMessage('A ação no pedido não foi concluída: ' + updateError.message + '. Se aprovou, confira se o participante já aparece na lista.', 'error');
-      buttons?.forEach(button => button.disabled = false);
-      return;
-    }
-    showMessage(decision === 'approve' ? 'Participante aprovado!' : 'Solicitação recusada.', 'success');
-    await loadMembers();
-    await loadRequests();
+      btn.addEventListener('click', () => {
+
+        $('appointmentId').value = btn.dataset.end;
+
+        $('endError').textContent = '';
+        $('finalPosition').value = '';
+        $('finalStage').value = '';
+
+        openModal('endModal');
+      });
+    });
   }
 
-  $('joinButton').addEventListener('click', requestToJoin);
-  $('refreshButton').addEventListener('click', loadPage);
-  $('requestsList').addEventListener('click', (event) => {
-    const button = event.target.closest('button[data-action]');
-    if (!button) return;
-    reviewRequest(button.dataset.id, button.dataset.user, button.dataset.action);
+  // CARREGAR OFERTAS RECEBIDAS
+  async function loadOffers() {
+
+    const { data, error } = await db
+      .from('coach_offers')
+      .select('*')
+      .eq('league_id', league.id)
+      .eq('coach_user_id', user.id)
+      .eq('status', 'pending')
+      .order('offered_at', { ascending: false });
+
+    if (error) {
+      $('offersList').innerHTML = '';
+      $('emptyOffers').textContent =
+        'Não foi possível carregar suas ofertas.';
+      return;
+    }
+
+    offers = data || [];
+
+    $('offerBadge').textContent =
+      offers.length ? `(${offers.length})` : '';
+
+    $('offersList').innerHTML = '';
+
+    $('emptyOffers').classList.toggle(
+      'hidden',
+      offers.length !== 0
+    );
+
+    offers.forEach(offer => {
+
+      const team = teams.find(t => t.id === offer.team_id);
+
+      $('offersList').insertAdjacentHTML(
+        'beforeend',
+        `<article class="panel rounded-2xl p-5">
+
+          <p class="text-xs uppercase tracking-wider text-blue-300 font-bold">
+            Você recebeu uma oferta de contrato
+          </p>
+
+          <h3 class="text-lg font-bold mt-2">
+            ${esc(team?.name || 'Equipe')}
+          </h3>
+
+          <p class="muted text-sm mt-1">
+            Competição: ${esc(league.title)}
+            · Função: Técnico principal
+          </p>
+
+          <p class="muted text-xs mt-2">
+            Enviada em ${date(offer.offered_at)}
+          </p>
+
+          <div class="flex gap-2 mt-4">
+            <button class="btn" data-accept="${offer.id}">
+              Aceitar oferta
+            </button>
+
+            <button class="btn-ghost" data-reject="${offer.id}">
+              Recusar
+            </button>
+          </div>
+
+          <p class="text-xs muted mt-3">
+            A nomeação é um recurso de simulação e gestão esportiva,
+            não um contrato de trabalho.
+          </p>
+
+        </article>`
+      );
+    });
+
+    document.querySelectorAll('[data-accept]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        respondOffer(btn.dataset.accept, true);
+      });
+    });
+
+    document.querySelectorAll('[data-reject]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        respondOffer(btn.dataset.reject, false);
+      });
+    });
+  }
+
+  // ACEITAR OU RECUSAR OFERTA
+  async function respondOffer(id, accept) {
+
+    const { error } = await db.rpc(
+      'respond_coach_offer',
+      {
+        p_offer_id: id,
+        p_accept: accept
+      }
+    );
+
+    if (error) {
+      toast('Não foi possível responder: ' + error.message);
+      return;
+    }
+
+    toast(
+      accept
+        ? 'Oferta aceita! Sua nomeação foi registrada.'
+        : 'Oferta recusada.'
+    );
+
+    await loadTeams();
+    await loadOffers();
+  }
+
+  // ABRIR CADASTRO DE EQUIPE
+  $('addTeamBtn').addEventListener('click', () => {
+
+    $('teamError').textContent = '';
+    $('teamForm').reset();
+
+    openModal('teamModal');
   });
 
-  loadPage();
+  // CADASTRAR EQUIPE
+  $('teamForm').addEventListener('submit', async e => {
+
+    e.preventDefault();
+
+    $('teamError').textContent = '';
+
+    const name = $('teamName').value.trim();
+    const logo = $('teamLogo').value.trim();
+
+    const { error } = await db.rpc(
+      'create_team',
+      {
+        p_league_id: league.id,
+        p_name: name,
+        p_logo_url: logo || null
+      }
+    );
+
+    if (error) {
+      $('teamError').textContent = error.message;
+      return;
+    }
+
+    closeModal('teamModal');
+
+    toast('Equipe cadastrada com sucesso!');
+
+    await loadTeams();
+  });
+
+  // ENVIAR OFERTA PARA TÉCNICO
+  $('coachForm').addEventListener('submit', async e => {
+
+    e.preventDefault();
+
+    $('coachError').textContent = '';
+
+    const username = $('coachUsername')
+      .value.trim()
+      .replace(/^@/, '');
+
+    const { error } = await db.rpc(
+      'send_coach_offer',
+      {
+        p_team_id: $('coachTeamId').value,
+        p_username: username
+      }
+    );
+
+    if (error) {
+      $('coachError').textContent = error.message;
+      return;
+    }
+
+    closeModal('coachModal');
+
+    toast('Oferta enviada ao técnico!');
+
+    await loadTeams();
+  });
+
+  // ENCERRAR NOMEAÇÃO
+  $('endForm').addEventListener('submit', async e => {
+
+    e.preventDefault();
+
+    $('endError').textContent = '';
+
+    const rawPosition = $('finalPosition').value;
+
+    const args = {
+      p_appointment_id: $('appointmentId').value,
+      p_reason: $('endReason').value,
+      p_final_position: rawPosition
+        ? Number(rawPosition)
+        : null,
+      p_final_stage: $('finalStage').value.trim() || null
+    };
+
+    const { error } = await db.rpc(
+      'end_coach_appointment',
+      args
+    );
+
+    if (error) {
+      $('endError').textContent = error.message;
+      return;
+    }
+
+    closeModal('endModal');
+
+    toast('Nomeação encerrada. Histórico preservado.');
+
+    await loadTeams();
+  });
+
+  // TROCAR ABAS
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+
+    btn.addEventListener('click', () => {
+
+      document.querySelectorAll('[data-tab]').forEach(b => {
+        b.classList.toggle('active', b === btn);
+      });
+
+      ['teams', 'offers', 'about'].forEach(tab => {
+
+        $('tab-' + tab).classList.toggle(
+          'hidden',
+          btn.dataset.tab !== tab
+        );
+
+      });
+    });
+  });
+
+  // FECHAR MODAIS
+  document.querySelectorAll('.closeModal').forEach(btn => {
+
+    btn.addEventListener('click', () => {
+      closeModal(btn.dataset.close);
+    });
+
+  });
+
+  // SAIR DA CONTA
+  $('logoutBtn').addEventListener('click', async () => {
+
+    await db.auth.signOut();
+
+    location.href = 'login.html';
+  });
+
+  // INICIAR
+  load().catch(err => {
+    showError(err?.message || 'Ocorreu um erro inesperado.');
+  });
+
+})();
 </script>
+
 </body>
 </html>
