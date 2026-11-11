@@ -1,1 +1,353 @@
-.
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#070B14">
+  <title>Dashboard | Liga Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { color-scheme: dark; --blue:#25A6FF; }
+    body { background:#070B14; color:#F8FAFC; }
+    .panel { background:rgba(15,23,42,.78); border:1px solid rgba(148,163,184,.14); }
+    .muted { color:#94A3B8; }
+    .blue-glow { box-shadow:0 0 35px rgba(37,166,255,.12); }
+    .btn-primary { background:#168DE0; color:white; transition:.2s; }
+    .btn-primary:hover { background:#0877C5; transform:translateY(-1px); }
+    .field { width:100%; background:#080F1D; border:1px solid #263449; border-radius:12px; padding:12px 14px; color:#F8FAFC; outline:none; }
+    .field:focus { border-color:#25A6FF; box-shadow:0 0 0 3px rgba(37,166,255,.12); }
+    .skeleton { background:linear-gradient(90deg,#111C2E 25%,#1B2A40 50%,#111C2E 75%); background-size:200% 100%; animation:shine 1.4s infinite; }
+    @keyframes shine { to { background-position:-200% 0; } }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="sticky top-0 z-30 border-b border-white/10 bg-[#070B14]/90 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+      <a href="index.html" class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/30 flex items-center justify-center text-blue-300 font-black text-lg">LM</div>
+        <div class="leading-tight">
+          <div class="font-black tracking-wide text-white">LIGA <span class="text-[#25A6FF]">MANAGER</span></div>
+          <div class="text-[10px] uppercase tracking-[.22em] text-slate-500">Painel do participante</div>
+        </div>
+      </a>
+      <div class="flex items-center gap-3">
+        <a href="perfil.html" class="hidden sm:flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-white/5 transition">
+          <div id="avatarSmall" class="w-9 h-9 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-200 font-bold">?</div>
+          <span id="headerUsername" class="text-sm font-semibold max-w-36 truncate">Carregando...</span>
+        </a>
+        <button id="logoutBtn" class="rounded-xl border border-white/10 px-3 sm:px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition">
+          <span class="hidden sm:inline">Sair da conta</span><span class="sm:hidden">Sair</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+    <section class="relative overflow-hidden rounded-3xl border border-blue-400/20 bg-gradient-to-br from-[#102642] via-[#0B1729] to-[#0B1220] p-6 sm:p-9 blue-glow">
+      <div class="absolute -right-16 -top-24 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+      <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[.24em] text-blue-300 mb-3">Seu espaÃ§o de competiÃ§Ã£o</p>
+          <h1 class="text-2xl sm:text-4xl font-black tracking-tight">OlÃ¡, <span id="welcomeName">...</span>! ðŸ‘‹</h1>
+          <p class="text-slate-300 mt-3 max-w-2xl leading-relaxed">Organize seus campeonatos, acompanhe suas competiÃ§Ãµes e encontre novos desafios no Liga Manager.</p>
+        </div>
+        <button id="openCreateBtn" class="btn-primary shrink-0 rounded-xl px-5 py-3.5 font-bold flex items-center justify-center gap-2">
+          <span class="text-xl leading-none">+</span> Criar competiÃ§Ã£o
+        </button>
+      </div>
+    </section>
+
+    <section class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-7">
+      <div class="panel rounded-2xl p-5">
+        <div class="flex items-center justify-between"><span class="text-sm muted">CompetiÃ§Ãµes criadas</span><span class="text-blue-300">â—†</span></div>
+        <div id="ownedCount" class="text-3xl font-black mt-3">â€”</div>
+        <p class="text-xs muted mt-1">CompetiÃ§Ãµes sob sua administraÃ§Ã£o</p>
+      </div>
+      <div class="panel rounded-2xl p-5">
+        <div class="flex items-center justify-between"><span class="text-sm muted">CompetiÃ§Ãµes pÃºblicas</span><span class="text-blue-300">â—Ž</span></div>
+        <div id="publicCount" class="text-3xl font-black mt-3">â€”</div>
+        <p class="text-xs muted mt-1">DisponÃ­veis para conhecer</p>
+      </div>
+      <div class="panel rounded-2xl p-5 sm:col-span-2 lg:col-span-1">
+        <div class="flex items-center justify-between"><span class="text-sm muted">Sua conta</span><span class="text-emerald-300">â—</span></div>
+        <div class="text-xl font-bold mt-3">Conectada</div>
+        <p id="userEmail" class="text-xs muted mt-1 truncate">Verificando sessÃ£o...</p>
+      </div>
+    </section>
+
+    <section class="mt-10">
+      <div class="flex items-end justify-between gap-4 mb-4">
+        <div><p class="text-xs uppercase tracking-[.2em] text-blue-300 font-bold">AdministraÃ§Ã£o</p><h2 class="text-xl sm:text-2xl font-black mt-1">Minhas competiÃ§Ãµes</h2></div>
+        <button id="refreshOwnedBtn" class="text-sm text-blue-300 hover:text-white transition">Atualizar</button>
+      </div>
+      <div id="ownedList" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="panel rounded-2xl p-5 h-36 skeleton"></div><div class="panel rounded-2xl p-5 h-36 skeleton"></div>
+      </div>
+    </section>
+
+    <section class="mt-10">
+      <div class="flex items-end justify-between gap-4 mb-4">
+        <div><p class="text-xs uppercase tracking-[.2em] text-blue-300 font-bold">Descubra</p><h2 class="text-xl sm:text-2xl font-black mt-1">Explorar competiÃ§Ãµes</h2><p class="text-sm muted mt-1">ConheÃ§a competiÃ§Ãµes pÃºblicas da comunidade.</p></div>
+        <button id="refreshPublicBtn" class="text-sm text-blue-300 hover:text-white transition">Atualizar</button>
+      </div>
+      <div id="publicList" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="panel rounded-2xl p-5 h-36 skeleton"></div><div class="panel rounded-2xl p-5 h-36 skeleton"></div>
+      </div>
+    </section>
+
+    <section class="panel rounded-2xl p-5 sm:p-6 mt-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div><h3 class="font-bold text-lg">Complete seu perfil</h3><p class="text-sm muted mt-1">Mantenha seu nome de usuÃ¡rio e suas informaÃ§Ãµes atualizados.</p></div>
+      <a href="perfil.html" class="rounded-xl border border-blue-400/30 px-4 py-3 text-sm font-bold text-blue-300 hover:bg-blue-500/10 text-center transition">Acessar meu perfil</a>
+    </section>
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center text-xs text-slate-600">Â© <span id="year"></span> Liga Manager. Todos os direitos reservados.</footer>
+
+  <div id="createModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+    <div class="panel w-full max-w-lg rounded-3xl p-6 sm:p-7 shadow-2xl">
+      <div class="flex items-start justify-between gap-4 mb-6">
+        <div><p class="text-xs uppercase tracking-[.2em] text-blue-300 font-bold">Nova competiÃ§Ã£o</p><h2 class="text-2xl font-black mt-1">Criar campeonato</h2><p class="text-sm muted mt-2">Preencha os dados iniciais. VocÃª poderÃ¡ configurar os detalhes depois.</p></div>
+        <button id="closeCreateBtn" class="text-slate-400 hover:text-white text-2xl leading-none" aria-label="Fechar">Ã—</button>
+      </div>
+      <form id="createForm" class="space-y-4">
+        <div><label for="leagueTitle" class="block text-sm font-semibold mb-2">Nome da competiÃ§Ã£o</label><input id="leagueTitle" class="field" maxlength="70" required placeholder="Ex.: Copa Liga Manager"></div>
+        <div><label for="leagueDescription" class="block text-sm font-semibold mb-2">DescriÃ§Ã£o <span class="muted font-normal">(opcional)</span></label><textarea id="leagueDescription" class="field min-h-24 resize-y" maxlength="500" placeholder="Conte um pouco sobre sua competiÃ§Ã£o..."></textarea></div>
+        <div><label for="leagueVisibility" class="block text-sm font-semibold mb-2">Visibilidade</label><select id="leagueVisibility" class="field"><option value="publica">PÃºblica â€” pode aparecer na exploraÃ§Ã£o</option><option value="privada">Privada â€” nÃ£o aparece publicamente</option></select></div>
+        <p id="createError" class="hidden text-sm text-red-300"></p>
+        <div class="flex flex-col-reverse sm:flex-row gap-3 pt-2"><button type="button" id="cancelCreateBtn" class="rounded-xl border border-white/10 px-4 py-3 font-semibold text-slate-300 hover:bg-white/5">Cancelar</button><button id="submitCreateBtn" type="submit" class="btn-primary rounded-xl px-4 py-3 font-bold flex-1">Criar competiÃ§Ã£o</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] hidden max-w-[90vw] rounded-xl border border-white/10 bg-slate-900 px-5 py-3 text-sm shadow-xl"></div>
+
+  <script>
+    const SUPABASE_URL = 'https://rhymsnkxlieqzdruirdc.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentUser = null;
+    let toastTimer = null;
+
+    const $ = (id) => document.getElementById(id);
+    const escapeHTML = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+    function showToast(message) {
+      const toast = $('toast');
+      toast.textContent = message;
+      toast.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
+    }
+
+    function setLoadingPage() {
+      $('welcomeName').textContent = 'carregando';
+      $('userEmail').textContent = 'Verificando sessÃ£o...';
+    }
+
+    function getDisplayName(user, profile) {
+      return profile?.username
+        || user.user_metadata?.username
+        || user.user_metadata?.full_name
+        || user.user_metadata?.name
+        || user.email?.split('@')[0]
+        || 'Participante';
+    }
+
+    async function loadOrCreateProfile(user) {
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('username, gamertag, avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar perfil:', error);
+        return null;
+      }
+      if (profile) return profile;
+
+      const suggested = getDisplayName(user, null).trim().replace(/\s+/g, ' ').slice(0, 30) || 'Participante';
+      const { data: created, error: insertError } = await supabaseClient
+        .from('profiles')
+        .insert({ id: user.id, username: suggested })
+        .select('username, gamertag, avatar_url')
+        .single();
+
+      if (insertError) {
+        console.error('Erro ao criar perfil:', insertError);
+        showToast('Sua conta entrou, mas nÃ£o foi possÃ­vel criar seu perfil. Verifique as permissÃµes da tabela profiles.');
+        return null;
+      }
+      return created;
+    }
+
+    function renderLeagueCard(league, owned) {
+      const title = escapeHTML(league.title || 'CompetiÃ§Ã£o sem tÃ­tulo');
+      const description = escapeHTML(league.description || 'Sem descriÃ§Ã£o cadastrada.');
+      const date = league.created_at ? new Date(league.created_at).toLocaleDateString('pt-BR') : '';
+      const visibility = league.visibility === 'privada' ? 'Privada' : 'PÃºblica';
+      const link = 'liga.html?id=' + encodeURIComponent(league.id);
+      return `<article class="panel rounded-2xl p-5 hover:border-blue-400/30 transition flex flex-col min-h-44">
+        <div class="flex items-start justify-between gap-3"><span class="text-[10px] uppercase tracking-[.16em] rounded-full px-2.5 py-1 ${owned ? 'bg-blue-500/15 text-blue-300' : 'bg-white/5 text-slate-300'}">${owned ? 'Sua competiÃ§Ã£o' : 'Comunidade'}</span><span class="text-xs muted">${visibility}</span></div>
+        <h3 class="font-bold text-lg mt-4 break-words">${title}</h3>
+        <p class="text-sm muted mt-2 line-clamp-2 flex-1">${description}</p>
+        <div class="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-white/10"><span class="text-xs text-slate-500">${date}</span><a href="${link}" class="text-sm font-bold text-blue-300 hover:text-white">Abrir pÃ¡gina â†’</a></div>
+      </article>`;
+    }
+
+    async function loadOwnedLeagues() {
+      $('ownedList').innerHTML = '<div class="panel rounded-2xl p-5 h-36 skeleton"></div>';
+      const { data, error } = await supabaseClient
+        .from('leagues')
+        .select('id, title, description, code, visibility, created_at')
+        .eq('owner_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar minhas competiÃ§Ãµes:', error);
+        $('ownedList').innerHTML = '<div class="panel rounded-2xl p-5 text-sm text-amber-200">NÃ£o foi possÃ­vel carregar suas competiÃ§Ãµes. Confira as permissÃµes de leitura da tabela leagues.</div>';
+        $('ownedCount').textContent = 'â€”';
+        return;
+      }
+      $('ownedCount').textContent = data.length;
+      $('ownedList').innerHTML = data.length
+        ? data.map(item => renderLeagueCard(item, true)).join('')
+        : '<div class="panel rounded-2xl p-6 md:col-span-2 xl:col-span-3"><h3 class="font-bold">VocÃª ainda nÃ£o criou uma competiÃ§Ã£o</h3><p class="text-sm muted mt-1">Clique em â€œCriar competiÃ§Ã£oâ€ para comeÃ§ar seu campeonato.</p><button onclick="document.getElementById(\'openCreateBtn\').click()" class="mt-4 text-sm font-bold text-blue-300 hover:text-white">Criar minha primeira competiÃ§Ã£o â†’</button></div>';
+    }
+
+    async function loadPublicLeagues() {
+      $('publicList').innerHTML = '<div class="panel rounded-2xl p-5 h-36 skeleton"></div>';
+      const { data, error } = await supabaseClient
+        .from('leagues')
+        .select('id, title, description, code, visibility, created_at')
+        .eq('visibility', 'publica')
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (error) {
+        console.error('Erro ao carregar competiÃ§Ãµes pÃºblicas:', error);
+        $('publicList').innerHTML = '<div class="panel rounded-2xl p-5 text-sm text-amber-200">NÃ£o foi possÃ­vel carregar as competiÃ§Ãµes pÃºblicas.</div>';
+        $('publicCount').textContent = 'â€”';
+        return;
+      }
+      $('publicCount').textContent = data.length;
+      $('publicList').innerHTML = data.length
+        ? data.map(item => renderLeagueCard(item, false)).join('')
+        : '<div class="panel rounded-2xl p-6 md:col-span-2 xl:col-span-3"><h3 class="font-bold">Ainda nÃ£o hÃ¡ competiÃ§Ãµes pÃºblicas</h3><p class="text-sm muted mt-1">Quando os administradores publicarem campeonatos, eles aparecerÃ£o aqui.</p></div>';
+    }
+
+    function openCreateModal() {
+      $('createError').classList.add('hidden');
+      $('createModal').classList.remove('hidden');
+      $('createModal').classList.add('flex');
+      $('leagueTitle').focus();
+    }
+    function closeCreateModal() {
+      $('createModal').classList.add('hidden');
+      $('createModal').classList.remove('flex');
+    }
+
+    function makeCode() {
+      return 'LM' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    }
+
+    async function createLeague(event) {
+      event.preventDefault();
+      const title = $('leagueTitle').value.trim();
+      const description = $('leagueDescription').value.trim();
+      const visibility = $('leagueVisibility').value;
+      const errorBox = $('createError');
+      const submit = $('submitCreateBtn');
+      errorBox.classList.add('hidden');
+      if (!title) return;
+      submit.disabled = true;
+      submit.textContent = 'Criando...';
+
+      const payload = {
+        title,
+        description: description || null,
+        code: makeCode(),
+        owner_id: currentUser.id,
+        teams: [],
+        matches: [],
+        visibility
+      };
+
+      const { data, error } = await supabaseClient
+        .from('leagues')
+        .insert(payload)
+        .select('id, title, description, code, visibility, created_at')
+        .single();
+
+      submit.disabled = false;
+      submit.textContent = 'Criar competiÃ§Ã£o';
+
+      if (error) {
+        console.error('Erro ao criar competiÃ§Ã£o:', error);
+        errorBox.textContent = 'NÃ£o foi possÃ­vel criar. Verifique as permissÃµes da tabela leagues e tente novamente.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      closeCreateModal();
+      $('createForm').reset();
+      showToast('CompetiÃ§Ã£o criada com sucesso!');
+      await loadOwnedLeagues();
+      await loadPublicLeagues();
+      if (data?.id) window.location.href = 'liga.html?id=' + encodeURIComponent(data.id);
+    }
+
+    async function logout() {
+      const button = $('logoutBtn');
+      button.disabled = true;
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) {
+        console.error('Erro ao sair:', error);
+        showToast('NÃ£o foi possÃ­vel encerrar a sessÃ£o. Tente novamente.');
+        button.disabled = false;
+        return;
+      }
+      window.location.replace('index.html');
+    }
+
+    async function initDashboard() {
+      setLoadingPage();
+      // getUser valida a sessÃ£o no servidor; evita aceitar uma sessÃ£o antiga apenas armazenada no navegador.
+      const { data: { user }, error } = await supabaseClient.auth.getUser();
+      if (error || !user) {
+        await supabaseClient.auth.signOut();
+        window.location.replace('index.html');
+        return;
+      }
+      currentUser = user;
+      $('userEmail').textContent = user.email || 'Conta Google';
+      const profile = await loadOrCreateProfile(user);
+      const name = getDisplayName(user, profile);
+      $('welcomeName').textContent = name;
+      $('headerUsername').textContent = name;
+      const initial = name.trim().charAt(0).toUpperCase() || '?';
+      $('avatarSmall').textContent = initial;
+
+      if (profile?.avatar_url) {
+        $('avatarSmall').innerHTML = `<img src="${escapeHTML(profile.avatar_url)}" alt="" class="w-full h-full object-cover rounded-full">`;
+      }
+
+      await Promise.all([loadOwnedLeagues(), loadPublicLeagues()]);
+    }
+
+    $('year').textContent = new Date().getFullYear();
+    $('openCreateBtn').addEventListener('click', openCreateModal);
+    $('closeCreateBtn').addEventListener('click', closeCreateModal);
+    $('cancelCreateBtn').addEventListener('click', closeCreateModal);
+    $('createModal').addEventListener('click', event => { if (event.target === $('createModal')) closeCreateModal(); });
+    $('createForm').addEventListener('submit', createLeague);
+    $('logoutBtn').addEventListener('click', logout);
+    $('refreshOwnedBtn').addEventListener('click', loadOwnedLeagues);
+    $('refreshPublicBtn').addEventListener('click', loadPublicLeagues);
+
+    initDashboard();
+  </script>
+</body>
+</html>
