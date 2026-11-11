@@ -52,9 +52,7 @@
           <h1 class="text-2xl sm:text-4xl font-black tracking-tight">Ol&#225;, <span id="welcomeName">...</span>! &#128075;</h1>
           <p class="text-slate-300 mt-3 max-w-2xl leading-relaxed">Organize seus campeonatos, acompanhe suas competi&#231;&#245;es e encontre novos desafios no Liga Manager.</p>
         </div>
-        <button id="openCreateBtn" class="btn-primary shrink-0 rounded-xl px-5 py-3.5 font-bold flex items-center justify-center gap-2">
-          <span class="text-xl leading-none">+</span> Criar competi&#231;&#227;o
-        </button>
+        <div class="text-sm text-blue-200/80 font-semibold">Use o bot&#227;o + para come&#231;ar</div>
       </div>
     </section>
 
@@ -120,6 +118,28 @@
     </div>
   </div>
 
+  <div id="joinCodeModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+    <div class="panel w-full max-w-md rounded-3xl p-6 sm:p-7 shadow-2xl">
+      <div class="flex items-start justify-between gap-4 mb-6">
+        <div><p class="text-xs uppercase tracking-[.2em] text-blue-300 font-bold">Acessar competi&#231;&#227;o</p><h2 class="text-2xl font-black mt-1">Entrar com c&#243;digo</h2><p class="text-sm muted mt-2">Digite o c&#243;digo disponibilizado pelo administrador da competi&#231;&#227;o.</p></div>
+        <button id="closeJoinCodeBtn" class="text-slate-400 hover:text-white text-2xl leading-none" aria-label="Fechar">&#215;</button>
+      </div>
+      <form id="joinCodeForm" class="space-y-4">
+        <div><label for="accessCode" class="block text-sm font-semibold mb-2">C&#243;digo da competi&#231;&#227;o</label><input id="accessCode" class="field uppercase tracking-widest" maxlength="30" required autocomplete="off" placeholder="Ex.: LMABC123"></div>
+        <p id="joinCodeError" class="hidden text-sm text-red-300"></p>
+        <div class="flex flex-col-reverse sm:flex-row gap-3 pt-2"><button type="button" id="cancelJoinCodeBtn" class="rounded-xl border border-white/10 px-4 py-3 font-semibold text-slate-300 hover:bg-white/5">Cancelar</button><button id="submitJoinCodeBtn" type="submit" class="btn-primary rounded-xl px-4 py-3 font-bold flex-1">Encontrar competi&#231;&#227;o</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="floatingActions" class="fixed bottom-6 right-5 sm:bottom-8 sm:right-8 z-40 flex flex-col items-end gap-3">
+    <div id="floatingOptions" class="hidden flex-col items-end gap-3">
+      <button id="joinWithCodeBtn" class="rounded-full border border-blue-400/30 bg-[#111E31] px-5 py-3 text-sm font-bold text-white shadow-xl hover:bg-[#1A2D46] transition">Entrar com c&#243;digo</button>
+      <button id="createFromFabBtn" class="rounded-full border border-blue-400/30 bg-[#111E31] px-5 py-3 text-sm font-bold text-white shadow-xl hover:bg-[#1A2D46] transition">Criar liga</button>
+    </div>
+    <button id="floatingPlusBtn" type="button" aria-label="Abrir a&#231;&#245;es" aria-expanded="false" class="w-16 h-16 rounded-full btn-primary shadow-2xl shadow-blue-950/50 flex items-center justify-center text-4xl font-light leading-none">+</button>
+  </div>
+
   <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] hidden max-w-[90vw] rounded-xl border border-white/10 bg-slate-900 px-5 py-3 text-sm shadow-xl"></div>
 
   <script>
@@ -143,7 +163,7 @@
 
     function setLoadingPage() {
       $('welcomeName').textContent = 'carregando';
-      $('userEmail').textContent = 'Verificando sess\u00E3o...';
+      $('userEmail').textContent = 'Verificando sess&#227;o...';
     }
 
     function getDisplayName(user, profile) {
@@ -177,23 +197,23 @@
 
       if (insertError) {
         console.error('Erro ao criar perfil:', insertError);
-        showToast('Sua conta entrou, mas n\u00E3o foi poss\u00EDvel criar seu perfil. Verifique as permiss\u00F5es da tabela profiles.');
+        showToast('Sua conta entrou, mas n&#227;o foi poss&#237;vel criar seu perfil. Verifique as permiss&#245;es da tabela profiles.');
         return null;
       }
       return created;
     }
 
     function renderLeagueCard(league, owned) {
-      const title = escapeHTML(league.title || 'Competi\u00E7\u00E3o sem t\u00EDtulo');
-      const description = escapeHTML(league.description || 'Sem descri\u00E7\u00E3o cadastrada.');
+      const title = escapeHTML(league.title || 'Competi&#231;&#227;o sem t&#237;tulo');
+      const description = escapeHTML(league.description || 'Sem descri&#231;&#227;o cadastrada.');
       const date = league.created_at ? new Date(league.created_at).toLocaleDateString('pt-BR') : '';
-      const visibility = league.visibility === 'privada' ? 'Privada' : 'P\u00FAblica';
+      const visibility = league.visibility === 'privada' ? 'Privada' : 'P&#250;blica';
       const link = 'liga.html?id=' + encodeURIComponent(league.id);
       return `<article class="panel rounded-2xl p-5 hover:border-blue-400/30 transition flex flex-col min-h-44">
-        <div class="flex items-start justify-between gap-3"><span class="text-[10px] uppercase tracking-[.16em] rounded-full px-2.5 py-1 ${owned ? 'bg-blue-500/15 text-blue-300' : 'bg-white/5 text-slate-300'}">${owned ? 'Sua competi\u00E7\u00E3o' : 'Comunidade'}</span><span class="text-xs muted">${visibility}</span></div>
+        <div class="flex items-start justify-between gap-3"><span class="text-[10px] uppercase tracking-[.16em] rounded-full px-2.5 py-1 ${owned ? 'bg-blue-500/15 text-blue-300' : 'bg-white/5 text-slate-300'}">${owned ? 'Sua competi&#231;&#227;o' : 'Comunidade'}</span><span class="text-xs muted">${visibility}</span></div>
         <h3 class="font-bold text-lg mt-4 break-words">${title}</h3>
         <p class="text-sm muted mt-2 line-clamp-2 flex-1">${description}</p>
-        <div class="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-white/10"><span class="text-xs text-slate-500">${date}</span><a href="${link}" class="text-sm font-bold text-blue-300 hover:text-white">Abrir p\u00E1gina \u2192</a></div>
+        <div class="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-white/10"><span class="text-xs text-slate-500">${date}</span><a href="${link}" class="text-sm font-bold text-blue-300 hover:text-white">Abrir p&#225;gina &#8594;</a></div>
       </article>`;
     }
 
@@ -206,15 +226,15 @@
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erro ao carregar minhas competi\u00E7\u00F5es:', error);
-        $('ownedList').innerHTML = '<div class="panel rounded-2xl p-5 text-sm text-amber-200">N\u00E3o foi poss\u00EDvel carregar suas competi\u00E7\u00F5es. Confira as permiss\u00F5es de leitura da tabela leagues.</div>';
-        $('ownedCount').textContent = '\u2014';
+        console.error('Erro ao carregar minhas competi&#231;&#245;es:', error);
+        $('ownedList').innerHTML = '<div class="panel rounded-2xl p-5 text-sm text-amber-200">N&#227;o foi poss&#237;vel carregar suas competi&#231;&#245;es. Confira as permiss&#245;es de leitura da tabela leagues.</div>';
+        $('ownedCount').textContent = '&#8212;';
         return;
       }
       $('ownedCount').textContent = data.length;
       $('ownedList').innerHTML = data.length
         ? data.map(item => renderLeagueCard(item, true)).join('')
-        : '<div class="panel rounded-2xl p-6 md:col-span-2 xl:col-span-3"><h3 class="font-bold">Voc\u00EA ainda n\u00E3o criou uma competi\u00E7\u00E3o</h3><p class="text-sm muted mt-1">Clique em \u201CCriar competi\u00E7\u00E3o\u201D para come\u00E7ar seu campeonato.</p><button onclick="document.getElementById(\'openCreateBtn\').click()" class="mt-4 text-sm font-bold text-blue-300 hover:text-white">Criar minha primeira competi\u00E7\u00E3o \u2192</button></div>';
+        : '<div class="panel rounded-2xl p-6 md:col-span-2 xl:col-span-3"><h3 class="font-bold">Voc&#234; ainda n&#227;o criou uma competi&#231;&#227;o</h3><p class="text-sm muted mt-1">Clique em &#8220;Criar competi&#231;&#227;o&#8221; para come&#231;ar seu campeonato.</p><button onclick="document.getElementById(\'floatingPlusBtn\').click()" class="mt-4 text-sm font-bold text-blue-300 hover:text-white">Criar minha primeira competi&#231;&#227;o &#8594;</button></div>';
     }
 
     async function loadPublicLeagues() {
@@ -227,15 +247,15 @@
         .limit(6);
 
       if (error) {
-        console.error('Erro ao carregar competi\u00E7\u00F5es p\u00FAblicas:', error);
-        $('publicList').innerHTML = '<div class="panel rounded-2xl p-5 text-sm text-amber-200">N\u00E3o foi poss\u00EDvel carregar as competi\u00E7\u00F5es p\u00FAblicas.</div>';
-        $('publicCount').textContent = '\u2014';
+        console.error('Erro ao carregar competi&#231;&#245;es p&#250;blicas:', error);
+        $('publicList').innerHTML = '<div class="panel rounded-2xl p-5 text-sm text-amber-200">N&#227;o foi poss&#237;vel carregar as competi&#231;&#245;es p&#250;blicas.</div>';
+        $('publicCount').textContent = '&#8212;';
         return;
       }
       $('publicCount').textContent = data.length;
       $('publicList').innerHTML = data.length
         ? data.map(item => renderLeagueCard(item, false)).join('')
-        : '<div class="panel rounded-2xl p-6 md:col-span-2 xl:col-span-3"><h3 class="font-bold">Ainda n\u00E3o h\u00E1 competi\u00E7\u00F5es p\u00FAblicas</h3><p class="text-sm muted mt-1">Quando os administradores publicarem campeonatos, eles aparecer\u00E3o aqui.</p></div>';
+        : '<div class="panel rounded-2xl p-6 md:col-span-2 xl:col-span-3"><h3 class="font-bold">Ainda n&#227;o h&#225; competi&#231;&#245;es p&#250;blicas</h3><p class="text-sm muted mt-1">Quando os administradores publicarem campeonatos, eles aparecer&#227;o aqui.</p></div>';
     }
 
     function openCreateModal() {
@@ -247,6 +267,63 @@
     function closeCreateModal() {
       $('createModal').classList.add('hidden');
       $('createModal').classList.remove('flex');
+    }
+
+    function openJoinCodeModal() {
+      $('joinCodeError').classList.add('hidden');
+      $('joinCodeModal').classList.remove('hidden');
+      $('joinCodeModal').classList.add('flex');
+      $('accessCode').value = '';
+      $('accessCode').focus();
+    }
+
+    function closeJoinCodeModal() {
+      $('joinCodeModal').classList.add('hidden');
+      $('joinCodeModal').classList.remove('flex');
+    }
+
+    function toggleFloatingOptions(force) {
+      const options = $('floatingOptions');
+      const shouldOpen = typeof force === 'boolean' ? force : options.classList.contains('hidden');
+      options.classList.toggle('hidden', !shouldOpen);
+      options.classList.toggle('flex', shouldOpen);
+      $('floatingPlusBtn').classList.toggle('rotate-45', shouldOpen);
+      $('floatingPlusBtn').setAttribute('aria-expanded', String(shouldOpen));
+    }
+
+    async function findLeagueByCode(event) {
+      event.preventDefault();
+      const code = $('accessCode').value.trim().toUpperCase();
+      const errorBox = $('joinCodeError');
+      const submit = $('submitJoinCodeBtn');
+      errorBox.classList.add('hidden');
+      if (!code) return;
+
+      submit.disabled = true;
+      submit.textContent = 'Procurando...';
+
+      const { data, error } = await supabaseClient
+        .from('leagues')
+        .select('id')
+        .eq('code', code)
+        .maybeSingle();
+
+      submit.disabled = false;
+      submit.textContent = 'Encontrar competi\&#231;\&#227;o';
+
+      if (error) {
+        console.error('Erro ao procurar competi\&#231;\&#227;o:', error);
+        errorBox.textContent = 'N\&#227;o foi poss\&#237;vel consultar esse c\&#243;digo. Verifique as permiss\&#245;es de leitura das competi\&#231;\&#245;es.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+      if (!data) {
+        errorBox.textContent = 'N\&#227;o encontramos uma competi\&#231;\&#227;o com esse c\&#243;digo. Confira e tente novamente.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      window.location.href = 'liga.html?id=' + encodeURIComponent(data.id);
     }
 
     function makeCode() {
@@ -282,18 +359,18 @@
         .single();
 
       submit.disabled = false;
-      submit.textContent = 'Criar competi\u00E7\u00E3o';
+      submit.textContent = 'Criar competi&#231;&#227;o';
 
       if (error) {
-        console.error('Erro ao criar competi\u00E7\u00E3o:', error);
-        errorBox.textContent = 'N\u00E3o foi poss\u00EDvel criar. Verifique as permiss\u00F5es da tabela leagues e tente novamente.';
+        console.error('Erro ao criar competi&#231;&#227;o:', error);
+        errorBox.textContent = 'N&#227;o foi poss&#237;vel criar. Verifique as permiss&#245;es da tabela leagues e tente novamente.';
         errorBox.classList.remove('hidden');
         return;
       }
 
       closeCreateModal();
       $('createForm').reset();
-      showToast('Competi\u00E7\u00E3o criada com sucesso!');
+      showToast('Competi&#231;&#227;o criada com sucesso!');
       await loadOwnedLeagues();
       await loadPublicLeagues();
       if (data?.id) window.location.href = 'liga.html?id=' + encodeURIComponent(data.id);
@@ -305,7 +382,7 @@
       const { error } = await supabaseClient.auth.signOut();
       if (error) {
         console.error('Erro ao sair:', error);
-        showToast('N\u00E3o foi poss\u00EDvel encerrar a sess\u00E3o. Tente novamente.');
+        showToast('N&#227;o foi poss&#237;vel encerrar a sess&#227;o. Tente novamente.');
         button.disabled = false;
         return;
       }
@@ -314,7 +391,7 @@
 
     async function initDashboard() {
       setLoadingPage();
-      // getUser valida a sess\u00E3o no servidor; evita aceitar uma sess\u00E3o antiga apenas armazenada no navegador.
+      // getUser valida a sess&#227;o no servidor; evita aceitar uma sess&#227;o antiga apenas armazenada no navegador.
       const { data: { user }, error } = await supabaseClient.auth.getUser();
       if (error || !user) {
         await supabaseClient.auth.signOut();
@@ -338,7 +415,20 @@
     }
 
     $('year').textContent = new Date().getFullYear();
-    $('openCreateBtn').addEventListener('click', openCreateModal);
+    $('createFromFabBtn').addEventListener('click', () => {
+      toggleFloatingOptions(false);
+      openCreateModal();
+    });
+    $('joinWithCodeBtn').addEventListener('click', () => {
+      toggleFloatingOptions(false);
+      openJoinCodeModal();
+    });
+    $('floatingPlusBtn').addEventListener('click', () => toggleFloatingOptions());
+    $('closeJoinCodeBtn').addEventListener('click', closeJoinCodeModal);
+    $('cancelJoinCodeBtn').addEventListener('click', closeJoinCodeModal);
+    $('joinCodeForm').addEventListener('submit', findLeagueByCode);
+    $('joinCodeModal').addEventListener('click', event => { if (event.target === $('joinCodeModal')) closeJoinCodeModal(); });
+    $('accessCode').addEventListener('input', event => { event.target.value = event.target.value.toUpperCase().replace(/\s/g, ''); });
     $('closeCreateBtn').addEventListener('click', closeCreateModal);
     $('cancelCreateBtn').addEventListener('click', closeCreateModal);
     $('createModal').addEventListener('click', event => { if (event.target === $('createModal')) closeCreateModal(); });
