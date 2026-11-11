@@ -1,1 +1,467 @@
-.
+
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#070B14">
+  <meta name="description" content="Liga Manager: crie, organize, siga e dispute campeonatos de futebol eletrônico.">
+  <title>Liga Manager — Seu campeonato começa aqui</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              blue: '#25A6FF',
+              hover: '#168DE0',
+              dark: '#070B14',
+              card: '#101827'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    html { scroll-behavior: smooth; }
+    body { background: #070B14; }
+    .blue-glow {
+      box-shadow: 0 0 45px rgba(37,166,255,.13);
+    }
+    .hero-grid {
+      background-image:
+        linear-gradient(rgba(37,166,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37,166,255,.035) 1px, transparent 1px);
+      background-size: 42px 42px;
+    }
+    .modal-open { overflow: hidden; }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col bg-[#070B14] text-white font-sans selection:bg-[#25A6FF] selection:text-white">
+
+  <!-- CABEÇALHO -->
+  <header class="sticky top-0 z-40 border-b border-white/10 bg-[#070B14]/95 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#25A6FF] flex items-center justify-center font-black text-[#070B14] text-xl shadow-lg shadow-blue-500/20">
+          L
+        </div>
+        <span class="text-lg sm:text-xl font-black tracking-tight">
+          LIGA <span class="text-[#25A6FF]">MANAGER</span>
+        </span>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
+        <a href="#campeonatos" class="hover:text-[#25A6FF] transition">Campeonatos</a>
+        <a href="#como-funciona" class="hover:text-[#25A6FF] transition">Como funciona</a>
+        <a href="#recursos" class="hover:text-[#25A6FF] transition">Recursos</a>
+        <a href="#vip" class="hover:text-[#25A6FF] transition">VIP</a>
+      </nav>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button onclick="openModal('loginModal')"
+          class="px-3 sm:px-5 py-2.5 rounded-xl border border-white/15 text-white text-sm font-bold hover:bg-white/10 transition">
+          Entrar
+        </button>
+
+        <button onclick="openModal('registerModal')"
+          class="px-3 sm:px-5 py-2.5 rounded-xl bg-[#25A6FF] text-[#06111F] text-sm font-black hover:bg-[#168DE0] transition">
+          Cadastrar
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+
+  <main class="flex-1">
+
+    <!-- HERO -->
+    <section class="relative overflow-hidden hero-grid">
+      <div class="absolute top-20 right-0 w-96 h-96 bg-[#25A6FF]/10 rounded-full blur-[120px]"></div>
+
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+          <div>
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#25A6FF]/30 bg-[#25A6FF]/10 text-[#25A6FF] text-xs font-bold mb-7">
+              <span class="w-2 h-2 rounded-full bg-[#25A6FF]"></span>
+              PLATAFORMA DE CAMPEONATOS E-SPORTS
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl lg:text-7xl font-black leading-[1.08] tracking-tight">
+              Seu campeonato.
+              <span class="text-[#25A6FF]">Suas regras.</span>
+              Seu legado.
+            </h1>
+
+            <p class="mt-7 text-slate-400 text-base sm:text-lg leading-relaxed max-w-xl">
+              Crie e administre campeonatos de futebol eletrônico, organize seus participantes, acompanhe partidas e classificações em um só lugar.
+            </p>
+
+            <div class="mt-9 flex flex-col sm:flex-row gap-4">
+              <button onclick="openModal('registerModal')"
+                class="px-8 py-4 rounded-xl bg-[#25A6FF] text-[#06111F] font-black text-base hover:bg-[#168DE0] transition shadow-xl shadow-blue-500/20">
+                Criar minha conta →
+              </button>
+
+              <a href="#como-funciona"
+                class="px-8 py-4 rounded-xl border border-white/15 text-white font-bold text-center hover:bg-white/5 transition">
+                Conhecer a plataforma
+              </a>
+            </div>
+
+            <div class="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs text-slate-500 font-semibold">
+              <span>✓ Crie suas competições</span>
+              <span>✓ Siga campeonatos</span>
+              <span>✓ Gerencie participantes</span>
+            </div>
+          </div>
+
+          <!-- PRÉVIA VISUAL -->
+          <div class="relative">
+            <div class="absolute inset-0 bg-[#25A6FF]/10 blur-[90px] rounded-full"></div>
+
+            <div class="relative bg-[#101827] border border-white/10 rounded-3xl p-5 sm:p-7 shadow-2xl blue-glow">
+
+              <div class="flex items-center justify-between mb-7">
+                <div>
+                  <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">Prévia da plataforma</p>
+                  <h2 class="text-xl font-black mt-1">Painel do campeonato</h2>
+                </div>
+                <span class="text-[10px] font-black text-[#25A6FF] bg-[#25A6FF]/10 px-3 py-2 rounded-lg">LIGA MANAGER</span>
+              </div>
+
+              <div class="rounded-2xl bg-[#070B14] border border-white/5 p-4 mb-4">
+                <div class="flex justify-between items-center mb-5">
+                  <div>
+                    <p class="text-xs text-slate-500">COMPETIÇÃO</p>
+                    <h3 class="font-black text-white mt-1">Liga dos Campeões</h3>
+                  </div>
+                  <span class="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-full">EM ANDAMENTO</span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="bg-[#101827] rounded-xl p-3">
+                    <p class="text-xs text-slate-500">Participantes</p>
+                    <p class="text-2xl font-black mt-1">16</p>
+                  </div>
+                  <div class="bg-[#101827] rounded-xl p-3">
+                    <p class="text-xs text-slate-500">Partidas</p>
+                    <p class="text-2xl font-black mt-1">24</p>
+                  </div>
+                  <div class="bg-[#101827] rounded-xl p-3">
+                    <p class="text-xs text-slate-500">Rodadas</p>
+                    <p class="text-2xl font-black mt-1">08</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl bg-[#070B14] border border-white/5 p-4">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="font-bold text-sm">Classificação</h3>
+                  <span class="text-xs text-[#25A6FF]">Ver tabela →</span>
+                </div>
+
+                <div class="space-y-3 text-sm">
+                  <div class="flex items-center justify-between bg-[#101827] p-3 rounded-xl">
+                    <div class="flex items-center gap-3">
+                      <span class="text-[#25A6FF] font-black">01</span>
+                      <span class="font-bold">FC Real</span>
+                    </div>
+                    <span class="font-black text-[#25A6FF]">09 pts</span>
+                  </div>
+
+                  <div class="flex items-center justify-between p-3 rounded-xl">
+                    <div class="flex items-center gap-3">
+                      <span class="text-slate-500 font-black">02</span>
+                      <span class="font-semibold text-slate-300">Atlético FC</span>
+                    </div>
+                    <span class="font-bold text-slate-300">06 pts</span>
+                  </div>
+
+                  <div class="flex items-center justify-between p-3 rounded-xl">
+                    <div class="flex items-center gap-3">
+                      <span class="text-slate-500 font-black">03</span>
+                      <span class="font-semibold text-slate-300">United Gamer</span>
+                    </div>
+                    <span class="font-bold text-slate-300">03 pts</span>
+                  </div>
+                </div>
+              </div>
+
+              <p class="text-[10px] text-slate-600 text-center mt-4">
+                Exemplo ilustrativo da plataforma
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- CAMPEONATOS -->
+    <section id="campeonatos" class="py-20 border-t border-white/5">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-10">
+          <div>
+            <p class="text-[#25A6FF] text-xs font-black tracking-widest uppercase mb-3">Explore</p>
+            <h2 class="text-3xl sm:text-4xl font-black">Campeonatos em destaque</h2>
+            <p class="text-slate-400 mt-3 max-w-xl">
+              Descubra competições, acompanhe seus favoritos e encontre novos desafios.
+            </p>
+          </div>
+
+          <button onclick="openModal('registerModal')"
+            class="text-[#25A6FF] font-bold text-sm hover:underline">
+            Quero participar →
+          </button>
+        </div>
+
+        <!-- A vitrine será conectada à tabela leagues após confirmar suas colunas -->
+        <div class="rounded-3xl border border-dashed border-white/15 bg-[#101827]/60 p-8 sm:p-12 text-center">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-[#25A6FF]/10 flex items-center justify-center text-3xl mb-5">
+            🏆
+          </div>
+
+          <h3 class="text-xl font-black">Sua próxima competição começa aqui</h3>
+
+          <p class="text-sm text-slate-400 max-w-lg mx-auto mt-3 leading-relaxed">
+            Em breve, os campeonatos públicos cadastrados no Liga Manager serão exibidos nesta vitrine. Você poderá conhecer as competições antes de decidir se deseja participar.
+          </p>
+
+          <button onclick="openModal('registerModal')"
+            class="mt-7 px-6 py-3 rounded-xl bg-[#25A6FF] text-[#06111F] font-black text-sm hover:bg-[#168DE0] transition">
+            Criar minha conta
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- COMO FUNCIONA -->
+    <section id="como-funciona" class="py-20 bg-[#0B1220] border-y border-white/5">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div class="text-center max-w-2xl mx-auto mb-14">
+          <p class="text-[#25A6FF] text-xs font-black tracking-widest uppercase mb-3">Simples e organizado</p>
+          <h2 class="text-3xl sm:text-4xl font-black">Como funciona o Liga Manager?</h2>
+          <p class="text-slate-400 mt-4">Tudo o que você precisa para organizar ou disputar uma competição.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          <div class="bg-[#101827] border border-white/5 rounded-2xl p-7">
+            <div class="w-12 h-12 rounded-xl bg-[#25A6FF]/10 text-[#25A6FF] flex items-center justify-center text-xl font-black mb-5">01</div>
+            <h3 class="text-lg font-black mb-3">Crie uma competição</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Cadastre sua competição, escolha as configurações e organize tudo como administrador.
+            </p>
+          </div>
+
+          <div class="bg-[#101827] border border-white/5 rounded-2xl p-7">
+            <div class="w-12 h-12 rounded-xl bg-[#25A6FF]/10 text-[#25A6FF] flex items-center justify-center text-xl font-black mb-5">02</div>
+            <h3 class="text-lg font-black mb-3">Convide e receba jogadores</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Divulgue sua página. Os interessados podem acompanhar a competição ou solicitar participação.
+            </p>
+          </div>
+
+          <div class="bg-[#101827] border border-white/5 rounded-2xl p-7">
+            <div class="w-12 h-12 rounded-xl bg-[#25A6FF]/10 text-[#25A6FF] flex items-center justify-center text-xl font-black mb-5">03</div>
+            <h3 class="text-lg font-black mb-3">Gerencie e dispute</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Organize partidas, acompanhe resultados e mantenha os participantes informados.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- RECURSOS -->
+    <section id="recursos" class="py-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div class="mb-12">
+          <p class="text-[#25A6FF] text-xs font-black tracking-widest uppercase mb-3">Ferramentas</p>
+          <h2 class="text-3xl sm:text-4xl font-black">Tudo organizado em um só lugar</h2>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+          <div class="bg-[#101827] border border-white/5 rounded-2xl p-6 hover:border-[#25A6FF]/40 transition">
+            <div class="text-3xl mb-5">🏆</div>
+            <h3 class="font-black text-lg mb-2">Páginas de campeonatos</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Cada competição possui sua própria página para apresentar informações e reunir sua comunidade.
+            </p>
+          </div>
+
+          <div class="bg-[#101827] border border-white/5 rounded-2xl p-6 hover:border-[#25A6FF]/40 transition">
+            <div class="text-3xl mb-5">📊</div>
+            <h3 class="font-black text-lg mb-2">Classificação</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Acompanhe tabelas, pontuações e desempenho dos participantes.
+            </p>
+          </div>
+
+          <div class="bg-[#101827] border border-white/5 rounded-2xl p-6 hover:border-[#25A6FF]/40 transition">
+            <div class="text-3xl mb-5">🔔</div>
+            <h3 class="font-black text-lg mb-2">Notificações</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Receba informações sobre solicitações e acontecimentos das competições.
+            </p>
+          </div>
+
+          <div class="bg-[#101827] border border-white/5 rounded-2xl p-6 hover:border-[#25A6FF]/40 transition">
+            <div class="text-3xl mb-5">👥</div>
+            <h3 class="font-black text-lg mb-2">Controle de participantes</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Organize os jogadores e gerencie os acessos de cada competição.
+            </p>
+          </div>
+
+          <div class="bg-[#101827] border border-white/5 rounded-2xl p-6 hover:border-[#25A6FF]/40 transition">
+            <div class="text-3xl mb-5">🛡️</div>
+            <h3 class="font-black text-lg mb-2">Área administrativa</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              O administrador controla sua competição e pode contar com até dois administradores adicionais.
+            </p>
+          </div>
+
+          <div class="bg-[#101827] border border-white/5 rounded-2xl p-6 hover:border-[#25A6FF]/40 transition">
+            <div class="text-3xl mb-5">🌐</div>
+            <h3 class="font-black text-lg mb-2">Comunidade</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Siga páginas de campeonatos e conheça competições sem precisar se inscrever para disputar.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- VIP -->
+    <section id="vip" class="py-20 bg-[#0B1220] border-y border-white/5">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div class="relative overflow-hidden rounded-3xl border border-[#25A6FF]/30 bg-gradient-to-br from-[#10243B] to-[#101827] p-8 sm:p-12">
+
+          <div class="absolute -right-20 -top-20 w-72 h-72 rounded-full bg-[#25A6FF]/10 blur-3xl"></div>
+
+          <div class="relative grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+
+            <div>
+              <span class="inline-flex px-4 py-2 rounded-full bg-[#25A6FF]/15 text-[#25A6FF] text-xs font-black tracking-widest">
+                LIGA MANAGER VIP
+              </span>
+
+              <h2 class="text-3xl sm:text-4xl font-black mt-5">
+                Eleve sua experiência.
+              </h2>
+
+              <p class="text-slate-300 mt-4 leading-relaxed">
+                Tenha acesso a recursos especiais e personalize ainda mais sua presença na plataforma.
+              </p>
+
+              <div class="mt-7 space-y-3 text-sm text-slate-200">
+                <p>✓ Envie banners personalizados para suas competições.</p>
+                <p>✓ Altere sua foto de perfil sem limites.</p>
+                <p>✓ Tenha um selo VIP no seu perfil.</p>
+                <p>✓ Cancele sua assinatura quando quiser.</p>
+              </div>
+            </div>
+
+            <div class="relative bg-[#070B14]/80 border border-white/10 rounded-2xl p-7 text-center">
+              <p class="text-slate-400 text-sm font-bold">Assinatura mensal</p>
+
+              <div class="mt-3">
+                <span class="text-5xl font-black">R$ 10</span>
+                <span class="text-slate-400 text-sm">/mês</span>
+              </div>
+
+              <p class="text-xs text-slate-500 mt-3">
+                Benefícios disponíveis enquanto sua assinatura estiver ativa.
+              </p>
+
+              <button onclick="openModal('registerModal')"
+                class="w-full mt-7 bg-[#25A6FF] text-[#06111F] font-black py-4 rounded-xl hover:bg-[#168DE0] transition">
+                Quero conhecer o VIP
+              </button>
+
+              <p class="text-[10px] text-slate-600 mt-4">
+                A contratação do VIP será disponibilizada em breve.
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- CHAMADA FINAL -->
+    <section class="py-20">
+      <div class="max-w-4xl mx-auto px-4 text-center">
+        <h2 class="text-3xl sm:text-5xl font-black leading-tight">
+          Seu próximo campeonato começa <span class="text-[#25A6FF]">aqui.</span>
+        </h2>
+
+        <p class="text-slate-400 mt-5 max-w-2xl mx-auto">
+          Crie sua conta gratuitamente e comece a explorar o Liga Manager.
+        </p>
+
+        <button onclick="openModal('registerModal')"
+          class="mt-8 px-9 py-4 bg-[#25A6FF] text-[#06111F] font-black rounded-xl hover:bg-[#168DE0] transition">
+          Criar minha conta agora →
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- RODAPÉ -->
+  <footer class="border-t border-white/10 bg-[#05080F] py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-5">
+        <div class="text-center sm:text-left">
+          <p class="font-black text-lg">LIGA <span class="text-[#25A6FF]">MANAGER</span></p>
+          <p class="text-xs text-slate-500 mt-1">Sua plataforma de campeonatos eSports.</p>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-5 text-xs text-slate-400">
+          <a href="#como-funciona" class="hover:text-[#25A6FF]">Como funciona</a>
+          <a href="#recursos" class="hover:text-[#25A6FF]">Recursos</a>
+          <a href="#vip" class="hover:text-[#25A6FF]">VIP</a>
+          <a href="mailto:contato@ligamanager.com" class="hover:text-[#25A6FF]">Contato</a>
+        </div>
+      </div>
+
+      <div class="border-t border-white/5 mt-7 pt-6 text-center text-xs text-slate-600">
+        © 2026 Liga Manager. Todos os direitos reservados.
+      </div>
+
+    </div>
+  </footer>
+
+
+  <!-- MODAL LOGIN -->
+  <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blu
