@@ -1,1 +1,357 @@
-.
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liga Manager | Liga</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { background: #080d18; color: #e5e7eb; }
+    .panel { background: rgba(17, 26, 43, .92); border: 1px solid rgba(148,163,184,.15); }
+    .muted { color: #94a3b8; }
+    .btn { border-radius: .75rem; padding: .65rem 1rem; font-weight: 700; transition: .15s; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary { background: #7c3aed; color: white; }
+    .btn-primary:hover { background: #6d28d9; }
+    .btn-secondary { background: #263449; color: #e2e8f0; }
+    .btn-secondary:hover { background: #334155; }
+    .btn-danger { background: #991b1b; color: white; }
+    .field { width: 100%; border: 1px solid #334155; background: #0b1424; color: white; border-radius: .75rem; padding: .7rem .85rem; }
+    .field:focus { outline: 2px solid #8b5cf6; border-color: transparent; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-slate-800 bg-slate-950/80">
+    <div class="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
+      <a href="dashboard.html" class="font-black tracking-wide text-xl"><span class="text-violet-400">LIGA</span> MANAGER</a>
+      <div class="flex items-center gap-3">
+        <span id="userLabel" class="hidden text-sm muted sm:inline"></span>
+        <a href="dashboard.html" class="btn btn-secondary text-sm">Voltar ao painel</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    <div id="pageMessage" class="mb-5 hidden rounded-xl border px-4 py-3 text-sm" role="status"></div>
+
+    <section class="panel overflow-hidden rounded-2xl">
+      <div class="h-36 bg-gradient-to-r from-violet-950 via-indigo-900 to-slate-900"></div>
+      <div class="p-6 md:p-8">
+        <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div class="min-w-0">
+            <p class="mb-2 text-xs font-bold uppercase tracking-[.2em] text-violet-300">Página da competição</p>
+            <h1 id="leagueTitle" class="break-words text-3xl font-black md:text-4xl">Carregando liga...</h1>
+            <p id="leagueDescription" class="mt-3 max-w-3xl muted">Buscando informações da competição.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span id="leagueVisibility" class="rounded-full bg-slate-800 px-3 py-1.5 text-xs font-bold">—</span>
+            <span id="leagueCode" class="rounded-full bg-slate-800 px-3 py-1.5 text-xs font-bold">Código: —</span>
+          </div>
+        </div>
+        <div class="mt-7 grid grid-cols-2 gap-3 md:grid-cols-3">
+          <div class="rounded-xl bg-slate-900/80 p-4"><p class="text-xs muted">Participantes</p><p id="memberCount" class="mt-1 text-2xl font-black">—</p></div>
+          <div class="rounded-xl bg-slate-900/80 p-4"><p class="text-xs muted">Solicitações pendentes</p><p id="requestCount" class="mt-1 text-2xl font-black">—</p></div>
+          <div class="col-span-2 rounded-xl bg-slate-900/80 p-4 md:col-span-1"><p class="text-xs muted">Sua função</p><p id="myRole" class="mt-1 text-lg font-black">—</p></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
+      <section class="panel rounded-2xl p-6">
+        <div class="flex items-center justify-between gap-3">
+          <div><h2 class="text-xl font-extrabold">Participantes</h2><p class="mt-1 text-sm muted">Jogadores que fazem parte desta liga.</p></div>
+          <button id="refreshButton" class="btn btn-secondary text-sm">Atualizar</button>
+        </div>
+        <div id="membersList" class="mt-5 space-y-3">
+          <p class="muted text-sm">Carregando participantes...</p>
+        </div>
+        <div id="joinArea" class="mt-6 border-t border-slate-800 pt-5 hidden">
+          <h3 class="font-bold">Quer participar desta liga?</h3>
+          <p class="mt-1 text-sm muted">Envie uma solicitação para o organizador analisar.</p>
+          <button id="joinButton" class="btn btn-primary mt-3">Solicitar entrada</button>
+        </div>
+      </section>
+
+      <aside class="space-y-6">
+        <section class="panel rounded-2xl p-6">
+          <h2 class="text-xl font-extrabold">Área do organizador</h2>
+          <p id="adminHint" class="mt-1 text-sm muted">As ferramentas de organização aparecem para o administrador da liga.</p>
+          <div id="requestsArea" class="mt-5 hidden">
+            <div class="flex items-center justify-between"><h3 class="font-bold">Solicitações de entrada</h3><span id="pendingBadge" class="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-bold text-amber-300">0 pendentes</span></div>
+            <div id="requestsList" class="mt-3 space-y-3"></div>
+          </div>
+        </section>
+
+        <section class="panel rounded-2xl p-6">
+          <h2 class="text-xl font-extrabold">Próximas etapas</h2>
+          <p class="mt-2 text-sm muted">Esta primeira versão organiza a liga e seus participantes. O módulo de times e técnicos será conectado depois que criarmos as tabelas próprias no Supabase.</p>
+          <ul class="mt-4 space-y-2 text-sm">
+            <li class="flex gap-2"><span class="text-violet-400">◆</span> Cadastro de times pelo organizador</li>
+            <li class="flex gap-2"><span class="text-violet-400">◆</span> Convite para técnico principal</li>
+            <li class="flex gap-2"><span class="text-violet-400">◆</span> Aceite e assinatura digital do contrato</li>
+            <li class="flex gap-2"><span class="text-violet-400">◆</span> Histórico de equipes e colocações</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="mx-auto max-w-6xl px-4 py-8 text-center text-xs muted">Liga Manager · Gestão de competições</footer>
+
+<script>
+  // A chave publishable/anon pode ficar no navegador. Nunca coloque a service_role aqui.
+  const SUPABASE_URL = 'https://rhymsnkxlieqzdruirdc.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const params = new URLSearchParams(window.location.search);
+  const leagueId = params.get('id');
+  let currentUser = null;
+  let currentLeague = null;
+  let isAdmin = false;
+  let isMember = false;
+  let myRequest = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  function showMessage(message, type = 'info') {
+    const el = $('pageMessage');
+    el.textContent = message;
+    el.className = 'mb-5 rounded-xl border px-4 py-3 text-sm';
+    if (type === 'error') el.classList.add('border-red-500/40', 'bg-red-950/50', 'text-red-200');
+    else if (type === 'success') el.classList.add('border-emerald-500/40', 'bg-emerald-950/50', 'text-emerald-200');
+    else el.classList.add('border-sky-500/40', 'bg-sky-950/50', 'text-sky-200');
+    el.classList.remove('hidden');
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[char]));
+  }
+
+  function initials(value) {
+    const text = String(value || '?').trim();
+    return text.slice(0, 2).toUpperCase();
+  }
+
+  async function loadPage() {
+    if (!leagueId) {
+      showMessage('O endereço desta página não contém o ID da liga. Abra a liga pelo painel.', 'error');
+      $('leagueTitle').textContent = 'Liga não identificada';
+      return;
+    }
+
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) {
+      showMessage('Não foi possível verificar seu acesso: ' + sessionError.message, 'error');
+      return;
+    }
+    currentUser = sessionData.session?.user || null;
+    if (!currentUser) {
+      showMessage('Você precisa entrar na sua conta para visualizar esta liga. Faça login e abra o link novamente.', 'error');
+      return;
+    }
+
+    $('userLabel').textContent = currentUser.email || 'Conta conectada';
+
+    const { data: league, error: leagueError } = await supabaseClient
+      .from('leagues')
+      .select('id,title,description,code,owner_id,visibility,created_at')
+      .eq('id', leagueId)
+      .single();
+
+    if (leagueError || !league) {
+      showMessage('Não foi possível carregar esta liga. Confira o link e as permissões do Supabase.' + (leagueError?.message ? ' Detalhe: ' + leagueError.message : ''), 'error');
+      $('leagueTitle').textContent = 'Liga não encontrada';
+      return;
+    }
+    currentLeague = league;
+    $('leagueTitle').textContent = league.title || 'Liga sem título';
+    $('leagueDescription').textContent = league.description || 'Esta liga ainda não possui uma descrição.';
+    $('leagueVisibility').textContent = league.visibility || 'visibilidade não definida';
+    $('leagueCode').textContent = 'Código: ' + (league.code || '—');
+
+    const { data: myMembership, error: myMembershipError } = await supabaseClient
+      .from('league_members')
+      .select('id,role')
+      .eq('league_id', leagueId)
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+
+    if (myMembershipError) console.warn('Verificação de participação:', myMembershipError.message);
+    isMember = !!myMembership;
+    isAdmin = league.owner_id === currentUser.id || myMembership?.role === 'admin';
+    $('myRole').textContent = isAdmin ? 'Organizador' : (isMember ? 'Participante' : 'Visitante');
+
+    const { data: requestData } = await supabaseClient
+      .from('league_requests')
+      .select('id,status')
+      .eq('league_id', leagueId)
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    myRequest = requestData?.[0] || null;
+
+    $('joinArea').classList.toggle('hidden', isMember || isAdmin);
+    if (!isMember && !isAdmin) {
+      const joinButton = $('joinButton');
+      if (myRequest?.status === 'pending') {
+        joinButton.textContent = 'Solicitação enviada';
+        joinButton.disabled = true;
+      } else if (myRequest?.status === 'approved') {
+        joinButton.textContent = 'Solicitação aprovada — atualize a página';
+        joinButton.disabled = true;
+      } else {
+        joinButton.textContent = myRequest?.status === 'rejected' ? 'Solicitar novamente' : 'Solicitar entrada';
+        joinButton.disabled = false;
+      }
+    }
+
+    await loadMembers();
+    if (isAdmin) await loadRequests();
+  }
+
+  async function loadMembers() {
+    const { data: members, error } = await supabaseClient
+      .from('league_members')
+      .select('id,user_id,role,joined_at')
+      .eq('league_id', leagueId)
+      .order('joined_at', { ascending: true });
+
+    if (error) {
+      $('membersList').innerHTML = '<p class="text-sm text-red-300">Não foi possível carregar os participantes: ' + escapeHtml(error.message) + '</p>';
+      return;
+    }
+
+    $('memberCount').textContent = members?.length || 0;
+    if (!members?.length) {
+      $('membersList').innerHTML = '<p class="rounded-xl bg-slate-900 p-4 text-sm muted">Ainda não há participantes cadastrados nesta liga.</p>';
+      return;
+    }
+
+    const userIds = [...new Set(members.map(member => member.user_id))];
+    const { data: profiles, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('id,username,gamertag,avatar_url')
+      .in('id', userIds);
+
+    if (profileError) console.warn('Perfis não puderam ser carregados:', profileError.message);
+    const profileMap = new Map((profiles || []).map(profile => [profile.id, profile]));
+
+    $('membersList').innerHTML = members.map(member => {
+      const profile = profileMap.get(member.user_id);
+      const username = profile?.username ? '@' + profile.username : 'Participante';
+      const gamertag = profile?.gamertag || '';
+      const role = member.role === 'admin' ? 'Administrador' : 'Jogador';
+      const avatar = profile?.avatar_url
+        ? `<img src="${escapeHtml(profile.avatar_url)}" alt="" class="h-11 w-11 rounded-full object-cover">`
+        : `<div class="flex h-11 w-11 items-center justify-center rounded-full bg-violet-900 font-black text-violet-200">${escapeHtml(initials(profile?.username))}</div>`;
+      return `<div class="flex items-center gap-3 rounded-xl bg-slate-900/80 p-3">
+        ${avatar}
+        <div class="min-w-0 flex-1"><p class="truncate font-bold">${escapeHtml(username)}</p><p class="truncate text-xs muted">${escapeHtml(gamertag || role)}</p></div>
+        <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs muted">${escapeHtml(role)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadRequests() {
+    $('requestsArea').classList.remove('hidden');
+    $('adminHint').textContent = 'Você é organizador desta liga e pode analisar os pedidos de entrada.';
+    const { data: requests, error } = await supabaseClient
+      .from('league_requests')
+      .select('id,user_id,status,created_at')
+      .eq('league_id', leagueId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      $('requestsList').innerHTML = '<p class="text-sm text-red-300">Erro ao carregar solicitações: ' + escapeHtml(error.message) + '</p>';
+      return;
+    }
+    $('requestCount').textContent = requests?.length || 0;
+    $('pendingBadge').textContent = (requests?.length || 0) + ' pendentes';
+
+    if (!requests?.length) {
+      $('requestsList').innerHTML = '<p class="rounded-xl bg-slate-900 p-4 text-sm muted">Nenhuma solicitação pendente.</p>';
+      return;
+    }
+
+    const userIds = [...new Set(requests.map(request => request.user_id))];
+    const { data: profiles } = await supabaseClient.from('profiles').select('id,username,gamertag').in('id', userIds);
+    const profileMap = new Map((profiles || []).map(profile => [profile.id, profile]));
+
+    $('requestsList').innerHTML = requests.map(request => {
+      const profile = profileMap.get(request.user_id);
+      const name = profile?.username ? '@' + profile.username : 'Usuário';
+      return `<div class="rounded-xl bg-slate-900 p-4" data-request="${escapeHtml(request.id)}">
+        <div class="mb-3"><p class="font-bold">${escapeHtml(name)}</p><p class="text-xs muted">${escapeHtml(profile?.gamertag || 'Solicitou entrada na liga')}</p></div>
+        <div class="flex gap-2"><button class="btn btn-primary flex-1 text-sm" data-action="approve" data-id="${escapeHtml(request.id)}" data-user="${escapeHtml(request.user_id)}">Aprovar</button><button class="btn btn-danger flex-1 text-sm" data-action="reject" data-id="${escapeHtml(request.id)}">Recusar</button></div>
+      </div>`;
+    }).join('');
+  }
+
+  async function requestToJoin() {
+    if (!currentUser || !currentLeague) return;
+    $('joinButton').disabled = true;
+    const { error } = await supabaseClient.from('league_requests').insert({
+      league_id: leagueId,
+      user_id: currentUser.id,
+      status: 'pending'
+    });
+    if (error) {
+      showMessage('Não foi possível enviar a solicitação: ' + error.message, 'error');
+      $('joinButton').disabled = false;
+      return;
+    }
+    showMessage('Solicitação enviada! O organizador poderá aprovar sua entrada.', 'success');
+    await loadPage();
+  }
+
+  async function reviewRequest(requestId, userId, decision) {
+    const requestCard = document.querySelector(`[data-request="${CSS.escape(requestId)}"]`);
+    const buttons = requestCard?.querySelectorAll('button');
+    buttons?.forEach(button => button.disabled = true);
+
+    if (decision === 'approve') {
+      const { error: memberError } = await supabaseClient.from('league_members').insert({
+        league_id: leagueId,
+        user_id: userId,
+        role: 'player'
+      });
+      if (memberError && !String(memberError.message).toLowerCase().includes('duplicate')) {
+        showMessage('Não foi possível adicionar o participante: ' + memberError.message, 'error');
+        buttons?.forEach(button => button.disabled = false);
+        return;
+      }
+    }
+
+    const { error: updateError } = await supabaseClient
+      .from('league_requests')
+      .update({ status: decision === 'approve' ? 'approved' : 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: currentUser.id })
+      .eq('id', requestId)
+      .eq('status', 'pending');
+
+    if (updateError) {
+      showMessage('A ação no pedido não foi concluída: ' + updateError.message + '. Se aprovou, confira se o participante já aparece na lista.', 'error');
+      buttons?.forEach(button => button.disabled = false);
+      return;
+    }
+    showMessage(decision === 'approve' ? 'Participante aprovado!' : 'Solicitação recusada.', 'success');
+    await loadMembers();
+    await loadRequests();
+  }
+
+  $('joinButton').addEventListener('click', requestToJoin);
+  $('refreshButton').addEventListener('click', loadPage);
+  $('requestsList').addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    reviewRequest(button.dataset.id, button.dataset.user, button.dataset.action);
+  });
+
+  loadPage();
+</script>
+</body>
+</html>
