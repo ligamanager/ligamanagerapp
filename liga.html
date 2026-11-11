@@ -34,6 +34,12 @@
     .tab.active { color: white; border-color: #3b82f6; }
     .modal-bg { background: rgba(0,0,0,.72); }
     .hidden { display: none !important; }
+    .image-preview {
+      width: 100%; max-height: 190px; object-fit: contain;
+      background: #080d18; border: 1px solid #34445f;
+      border-radius: 12px;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
   </style>
 </head>
 
@@ -76,7 +82,12 @@
     <div class="panel rounded-2xl overflow-hidden mt-5">
 
       <div id="leagueBanner"
-           class="h-40 sm:h-56 bg-gradient-to-r from-blue-950 via-blue-800 to-slate-900 relative">
+           class="h-40 sm:h-56 bg-gradient-to-r from-blue-950 via-blue-800 to-slate-900 relative overflow-hidden">
+
+        <img id="leagueBannerImage"
+             class="hidden absolute inset-0 w-full h-full object-cover"
+             alt="Banner da competição">
+
         <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 to-transparent"></div>
       </div>
 
@@ -85,7 +96,7 @@
         <div class="flex flex-col sm:flex-row gap-4 sm:items-end">
 
           <div id="leagueLogo"
-               class="-mt-16 w-24 h-24 rounded-2xl border-4 border-slate-900 bg-slate-800 flex items-center justify-center text-3xl font-black relative z-10">
+               class="-mt-16 w-24 h-24 rounded-2xl border-4 border-slate-900 bg-slate-800 flex items-center justify-center text-3xl font-black relative z-10 overflow-hidden">
             LM
           </div>
 
@@ -107,6 +118,9 @@
           </div>
 
           <div id="adminActions" class="hidden flex-wrap gap-2">
+            <button id="editLeagueMediaBtn" class="btn-ghost hidden">
+              Personalizar capa
+            </button>
             <button id="addTeamBtn" class="btn">
               + Cadastrar equipe
             </button>
@@ -138,18 +152,14 @@
     <!-- NAVEGAÇÃO -->
     <nav class="flex gap-2 border-b border-slate-800 mt-7 overflow-x-auto">
 
-      <button class="tab active" data-tab="teams">
-        Equipes
-      </button>
+      <button class="tab active" data-tab="teams">Equipes</button>
 
       <button class="tab" data-tab="offers">
         Ofertas para mim
         <span id="offerBadge" class="text-blue-400"></span>
       </button>
 
-      <button class="tab" data-tab="about">
-        Sobre a competição
-      </button>
+      <button class="tab" data-tab="about">Sobre a competição</button>
 
     </nav>
 
@@ -159,9 +169,7 @@
       <div class="flex items-center justify-between gap-3 mb-4">
         <div>
           <h2 class="text-xl font-bold">Equipes participantes</h2>
-          <p class="muted text-sm">
-            Equipes e seus técnicos principais.
-          </p>
+          <p class="muted text-sm">Equipes e seus técnicos principais.</p>
         </div>
       </div>
 
@@ -198,10 +206,7 @@
     <section id="tab-about" class="hidden py-6">
 
       <div class="panel rounded-2xl p-5">
-
-        <h2 class="text-xl font-bold mb-3">
-          Sobre esta competição
-        </h2>
+        <h2 class="text-xl font-bold mb-3">Sobre esta competição</h2>
 
         <p id="aboutDescription" class="muted whitespace-pre-wrap">
           Sem descrição informada.
@@ -210,7 +215,6 @@
         <div class="border-t border-slate-700 mt-5 pt-4 text-sm muted">
           Organizada pelo administrador da competição.
         </div>
-
       </div>
 
     </section>
@@ -220,9 +224,9 @@
 
 <!-- MODAL CADASTRAR EQUIPE -->
 <div id="teamModal"
-     class="hidden fixed inset-0 z-50 modal-bg items-center justify-center p-4">
+     class="hidden fixed inset-0 z-50 modal-bg items-center justify-center p-4 overflow-y-auto">
 
-  <div class="panel rounded-2xl p-6 w-full max-w-md">
+  <div class="panel rounded-2xl p-6 w-full max-w-md my-auto">
 
     <div class="flex justify-between items-center mb-5">
       <h2 class="text-xl font-bold">Cadastrar equipe</h2>
@@ -238,25 +242,109 @@
       </div>
 
       <div>
+        <label class="block text-sm mb-2">Escudo da equipe</label>
+        <input id="teamLogoFile" class="field" type="file"
+               accept="image/png,image/jpeg,image/webp">
+
+        <p class="text-xs muted mt-2">
+          Selecione uma imagem PNG, JPG ou WEBP. Tamanho máximo: 5 MB.
+        </p>
+
+        <img id="teamLogoPreview" class="image-preview hidden mt-3"
+             alt="Prévia do escudo">
+      </div>
+
+      <div>
         <label class="block text-sm mb-2">
-          URL do escudo (opcional)
+          Ou informe uma URL pública (opcional)
         </label>
         <input id="teamLogo" class="field" type="url"
                placeholder="https://...">
+        <p class="text-xs muted mt-1">
+          Se selecionar um arquivo, ele terá prioridade sobre a URL.
+        </p>
       </div>
-
-      <p class="text-xs muted">
-        Nesta etapa, o escudo deve estar hospedado em uma URL pública.
-      </p>
 
       <div id="teamError" class="text-sm text-red-400"></div>
 
       <div class="flex gap-2 justify-end">
         <button type="button" class="btn-ghost closeModal"
-                data-close="teamModal">
-          Cancelar
+                data-close="teamModal">Cancelar</button>
+        <button id="saveTeamBtn" class="btn" type="submit">
+          Salvar equipe
         </button>
-        <button class="btn" type="submit">Salvar equipe</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- MODAL PERSONALIZAR CAPA DA COMPETIÇÃO -->
+<div id="leagueMediaModal"
+     class="hidden fixed inset-0 z-50 modal-bg items-center justify-center p-4 overflow-y-auto">
+
+  <div class="panel rounded-2xl p-6 w-full max-w-lg my-auto">
+
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="text-xl font-bold">Personalizar competição</h2>
+      <button class="closeModal text-2xl muted"
+              data-close="leagueMediaModal">×</button>
+    </div>
+
+    <form id="leagueMediaForm" class="space-y-5">
+
+      <div>
+        <label class="block text-sm font-bold mb-2">Logo da competição</label>
+
+        <input id="leagueLogoFile" class="field" type="file"
+               accept="image/png,image/jpeg,image/webp">
+
+        <img id="leagueLogoPreview"
+             class="image-preview hidden mt-3"
+             alt="Prévia da logo">
+
+        <p class="text-xs muted mt-2">PNG, JPG ou WEBP. Máximo 5 MB.</p>
+
+        <label class="block text-xs muted mt-3 mb-1">
+          Ou URL pública da logo
+        </label>
+        <input id="leagueLogoUrl" class="field" type="url"
+               placeholder="https://...">
+      </div>
+
+      <div class="border-t border-slate-700 pt-4">
+        <label class="block text-sm font-bold mb-2">Banner da competição</label>
+
+        <input id="leagueBannerFile" class="field" type="file"
+               accept="image/png,image/jpeg,image/webp">
+
+        <img id="leagueBannerPreview"
+             class="image-preview hidden mt-3"
+             alt="Prévia do banner">
+
+        <p class="text-xs muted mt-2">PNG, JPG ou WEBP. Máximo 5 MB.</p>
+
+        <label class="block text-xs muted mt-3 mb-1">
+          Ou URL pública do banner
+        </label>
+        <input id="leagueBannerUrl" class="field" type="url"
+               placeholder="https://...">
+      </div>
+
+      <p class="text-xs muted">
+        Nesta versão, o administrador principal pode enviar imagens próprias.
+        A seleção de modelos de banner e as regras VIP serão adicionadas em
+        uma próxima etapa.
+      </p>
+
+      <div id="leagueMediaError" class="text-sm text-red-400"></div>
+
+      <div class="flex gap-2 justify-end">
+        <button type="button" class="btn-ghost closeModal"
+                data-close="leagueMediaModal">Cancelar</button>
+        <button id="saveLeagueMediaBtn" class="btn" type="submit">
+          Salvar capa
+        </button>
       </div>
 
     </form>
@@ -277,13 +365,10 @@
     <form id="coachForm" class="space-y-4">
 
       <input id="coachTeamId" type="hidden">
-
       <p id="coachTeamName" class="text-sm text-blue-300"></p>
 
       <div>
-        <label class="block text-sm mb-2">
-          Usuário do técnico
-        </label>
+        <label class="block text-sm mb-2">Usuário do técnico</label>
         <input id="coachUsername" class="field" required
                placeholder="@usuario">
       </div>
@@ -296,9 +381,7 @@
 
       <div class="flex gap-2 justify-end">
         <button type="button" class="btn-ghost closeModal"
-                data-close="coachModal">
-          Cancelar
-        </button>
+                data-close="coachModal">Cancelar</button>
         <button class="btn" type="submit">Enviar oferta</button>
       </div>
 
@@ -323,7 +406,6 @@
 
       <div>
         <label class="block text-sm mb-2">Motivo</label>
-
         <select id="endReason" class="field" required>
           <option value="competition_ended">Competição encerrada</option>
           <option value="eliminated">Equipe eliminada</option>
@@ -333,17 +415,13 @@
       </div>
 
       <div>
-        <label class="block text-sm mb-2">
-          Posição final (opcional)
-        </label>
+        <label class="block text-sm mb-2">Posição final (opcional)</label>
         <input id="finalPosition" class="field" type="number"
                min="1" placeholder="Ex.: 3">
       </div>
 
       <div>
-        <label class="block text-sm mb-2">
-          Fase alcançada (opcional)
-        </label>
+        <label class="block text-sm mb-2">Fase alcançada (opcional)</label>
         <input id="finalStage" class="field" maxlength="80"
                placeholder="Ex.: Semifinal">
       </div>
@@ -356,12 +434,8 @@
 
       <div class="flex gap-2 justify-end">
         <button type="button" class="btn-ghost closeModal"
-                data-close="endModal">
-          Cancelar
-        </button>
-        <button class="btn" type="submit">
-          Confirmar encerramento
-        </button>
+                data-close="endModal">Cancelar</button>
+        <button class="btn" type="submit">Confirmar encerramento</button>
       </div>
 
     </form>
@@ -370,7 +444,7 @@
 
 <!-- AVISOS -->
 <div id="toast"
-     class="fixed bottom-5 left-1/2 -translate-x-1/2 hidden z-[70] bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-xl text-sm">
+     class="fixed bottom-5 left-1/2 -translate-x-1/2 hidden z-[70] bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-xl text-sm max-w-[90%]">
 </div>
 
 <script>
@@ -389,9 +463,14 @@
 
   const $ = id => document.getElementById(id);
 
+  const BUCKET = 'league-media';
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
   let user = null;
   let league = null;
   let isAdmin = false;
+  let isOwner = false;
   let teams = [];
   let appointments = [];
   let offers = [];
@@ -400,9 +479,7 @@
     $('toast').textContent = message;
     $('toast').classList.remove('hidden');
 
-    setTimeout(() => {
-      $('toast').classList.add('hidden');
-    }, 3200);
+    setTimeout(() => $('toast').classList.add('hidden'), 3200);
   }
 
   function showError(message) {
@@ -451,6 +528,141 @@
       administrative_removal: 'Remoção administrativa',
       unsatisfactory_performance: 'Desempenho insatisfatório'
     })[reason] || reason || '—';
+  }
+
+  // VALIDAR IMAGENS
+  function validateImage(file) {
+    if (!file) return 'Selecione uma imagem.';
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return 'Formato inválido. Use PNG, JPG ou WEBP.';
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      return 'A imagem ultrapassa o limite de 5 MB.';
+    }
+
+    return null;
+  }
+
+  function extensionFromFile(file) {
+    const extensions = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/webp': 'webp'
+    };
+
+    return extensions[file.type];
+  }
+
+  // ENVIAR IMAGEM PARA O SUPABASE STORAGE
+  async function uploadImage(file, folder) {
+
+    const validation = validateImage(file);
+
+    if (validation) {
+      throw new Error(validation);
+    }
+
+    const extension = extensionFromFile(file);
+    const filename =
+      `${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${extension}`;
+
+    const path = `${user.id}/${folder}/${filename}`;
+
+    const { error } = await db.storage
+      .from(BUCKET)
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type
+      });
+
+    if (error) throw error;
+
+    const { data } = db.storage
+      .from(BUCKET)
+      .getPublicUrl(path);
+
+    if (!data?.publicUrl) {
+      throw new Error('Não foi possível gerar o endereço público da imagem.');
+    }
+
+    return data.publicUrl;
+  }
+
+  // PRÉ-VISUALIZAÇÃO DE ARQUIVOS
+  function setupPreview(inputId, previewId) {
+
+    $(inputId).addEventListener('change', () => {
+
+      const file = $(inputId).files[0];
+      const preview = $(previewId);
+
+      if (!file) {
+        preview.src = '';
+        preview.classList.add('hidden');
+        return;
+      }
+
+      const validation = validateImage(file);
+
+      if (validation) {
+        toast(validation);
+        $(inputId).value = '';
+        preview.src = '';
+        preview.classList.add('hidden');
+        return;
+      }
+
+      preview.src = URL.createObjectURL(file);
+      preview.classList.remove('hidden');
+    });
+  }
+
+  setupPreview('teamLogoFile', 'teamLogoPreview');
+  setupPreview('leagueLogoFile', 'leagueLogoPreview');
+  setupPreview('leagueBannerFile', 'leagueBannerPreview');
+
+  // EXIBIR LOGO E BANNER DA COMPETIÇÃO
+  function renderLeagueMedia() {
+
+    const logo = $('leagueLogo');
+
+    logo.innerHTML = '';
+
+    if (league.logo_url) {
+      const img = document.createElement('img');
+      img.src = league.logo_url;
+      img.alt = 'Logo da competição';
+      img.className = 'w-full h-full object-cover';
+
+      img.onerror = () => {
+        img.remove();
+        logo.textContent = (league.title || 'LM')
+          .trim().slice(0, 2).toUpperCase();
+      };
+
+      logo.appendChild(img);
+    } else {
+      logo.textContent = (league.title || 'LM')
+        .trim().slice(0, 2).toUpperCase();
+    }
+
+    const banner = $('leagueBannerImage');
+
+    if (league.banner_url) {
+      banner.src = league.banner_url;
+      banner.classList.remove('hidden');
+
+      banner.onerror = () => {
+        banner.removeAttribute('src');
+        banner.classList.add('hidden');
+      };
+    } else {
+      banner.removeAttribute('src');
+      banner.classList.add('hidden');
+    }
   }
 
   // CARREGAR COMPETIÇÃO
@@ -502,10 +714,10 @@
 
     league = found;
 
-    isAdmin = league.owner_id === user.id;
+    isOwner = league.owner_id === user.id;
+    isAdmin = isOwner;
 
     if (!isAdmin) {
-
       const { data: membership } = await db
         .from('league_members')
         .select('role')
@@ -523,6 +735,11 @@
 
     if (isAdmin) {
       $('adminActions').classList.remove('hidden');
+    }
+
+    // A atualização das imagens da competição fica com o proprietário.
+    if (isOwner) {
+      $('editLeagueMediaBtn').classList.remove('hidden');
     }
 
     await loadTeams();
@@ -548,18 +765,13 @@
     $('visibilityLabel').textContent =
       league.visibility === 'privada' ? 'Privada' : 'Pública';
 
-    // O schema atual ainda não possui colunas de logo e banner.
-    $('leagueLogo').textContent =
-      (league.title || 'LM').trim().slice(0, 2).toUpperCase();
+    renderLeagueMedia();
   }
 
   // CARREGAR EQUIPES E TÉCNICOS
   async function loadTeams() {
 
-    const {
-      data: teamRows,
-      error: teamError
-    } = await db
+    const { data: teamRows, error: teamError } = await db
       .from('teams')
       .select('*')
       .eq('league_id', league.id)
@@ -572,10 +784,7 @@
 
     teams = teamRows || [];
 
-    const {
-      data: appointmentRows,
-      error: appointmentError
-    } = await db
+    const { data: appointmentRows, error: appointmentError } = await db
       .from('coach_appointments')
       .select('*')
       .eq('league_id', league.id)
@@ -593,7 +802,6 @@
   function renderTeams() {
 
     $('teamCount').textContent = teams.length;
-
     $('teamsList').innerHTML = '';
 
     $('emptyTeams').classList.toggle(
@@ -608,9 +816,11 @@
       );
 
       const logo = team.logo_url
-        ? `<img src="${esc(team.logo_url)}" alt=""
-             class="w-14 h-14 rounded-xl object-cover bg-slate-800"
-             onerror="this.style.display='none'">`
+        ? `<img src="${esc(team.logo_url)}"
+                alt="Escudo de ${esc(team.name)}"
+                class="w-14 h-14 rounded-xl object-cover bg-slate-800"
+                onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+           <div hidden class="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-xl">⚽</div>`
         : `<div class="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-xl">⚽</div>`;
 
       const coach = appointment
@@ -625,14 +835,14 @@
       const adminButtons = isAdmin
         ? `<div class="flex flex-wrap gap-2 mt-4">
              <button class="btn-ghost text-sm"
-               data-invite="${team.id}"
+               data-invite="${esc(team.id)}"
                data-name="${esc(team.name)}">
                Convidar técnico
              </button>
 
              ${appointment
                ? `<button class="btn-ghost text-sm text-red-300"
-                    data-end="${appointment.id}">
+                    data-end="${esc(appointment.id)}">
                     Encerrar nomeação
                   </button>`
                : ''}
@@ -658,31 +868,21 @@
     });
 
     document.querySelectorAll('[data-invite]').forEach(btn => {
-
       btn.addEventListener('click', () => {
-
         $('coachTeamId').value = btn.dataset.invite;
-
-        $('coachTeamName').textContent =
-          'Equipe: ' + btn.dataset.name;
-
+        $('coachTeamName').textContent = 'Equipe: ' + btn.dataset.name;
         $('coachUsername').value = '';
         $('coachError').textContent = '';
-
         openModal('coachModal');
       });
     });
 
     document.querySelectorAll('[data-end]').forEach(btn => {
-
       btn.addEventListener('click', () => {
-
         $('appointmentId').value = btn.dataset.end;
-
         $('endError').textContent = '';
         $('finalPosition').value = '';
         $('finalStage').value = '';
-
         openModal('endModal');
       });
     });
@@ -744,11 +944,11 @@
           </p>
 
           <div class="flex gap-2 mt-4">
-            <button class="btn" data-accept="${offer.id}">
+            <button class="btn" data-accept="${esc(offer.id)}">
               Aceitar oferta
             </button>
 
-            <button class="btn-ghost" data-reject="${offer.id}">
+            <button class="btn-ghost" data-reject="${esc(offer.id)}">
               Recusar
             </button>
           </div>
@@ -803,42 +1003,165 @@
 
   // ABRIR CADASTRO DE EQUIPE
   $('addTeamBtn').addEventListener('click', () => {
-
     $('teamError').textContent = '';
     $('teamForm').reset();
-
+    $('teamLogoPreview').src = '';
+    $('teamLogoPreview').classList.add('hidden');
     openModal('teamModal');
   });
 
-  // CADASTRAR EQUIPE
+  // CADASTRAR EQUIPE COM UPLOAD DE ESCUDO
   $('teamForm').addEventListener('submit', async e => {
 
     e.preventDefault();
 
     $('teamError').textContent = '';
 
-    const name = $('teamName').value.trim();
-    const logo = $('teamLogo').value.trim();
+    const button = $('saveTeamBtn');
+    button.disabled = true;
+    button.textContent = 'Salvando...';
 
-    const { error } = await db.rpc(
-      'create_team',
-      {
-        p_league_id: league.id,
-        p_name: name,
-        p_logo_url: logo || null
+    try {
+
+      const name = $('teamName').value.trim();
+      const file = $('teamLogoFile').files[0];
+      const externalUrl = $('teamLogo').value.trim();
+
+      if (!name) {
+        throw new Error('Informe o nome da equipe.');
       }
+
+      let logoUrl = externalUrl || null;
+
+      if (file) {
+        logoUrl = await uploadImage(
+          file,
+          `teams/${league.id}`
+        );
+      }
+
+      const { error } = await db.rpc(
+        'create_team',
+        {
+          p_league_id: league.id,
+          p_name: name,
+          p_logo_url: logoUrl
+        }
+      );
+
+      if (error) throw error;
+
+      closeModal('teamModal');
+      toast('Equipe cadastrada com sucesso!');
+
+      await loadTeams();
+
+    } catch (error) {
+      $('teamError').textContent =
+        error.message || 'Não foi possível cadastrar a equipe.';
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Salvar equipe';
+    }
+  });
+
+  // ABRIR PERSONALIZAÇÃO DA COMPETIÇÃO
+  $('editLeagueMediaBtn').addEventListener('click', () => {
+
+    $('leagueMediaError').textContent = '';
+    $('leagueMediaForm').reset();
+
+    $('leagueLogoUrl').value = league.logo_url || '';
+    $('leagueBannerUrl').value = league.banner_url || '';
+
+    $('leagueLogoPreview').src = league.logo_url || '';
+    $('leagueBannerPreview').src = league.banner_url || '';
+
+    $('leagueLogoPreview').classList.toggle(
+      'hidden',
+      !league.logo_url
     );
 
-    if (error) {
-      $('teamError').textContent = error.message;
-      return;
+    $('leagueBannerPreview').classList.toggle(
+      'hidden',
+      !league.banner_url
+    );
+
+    openModal('leagueMediaModal');
+  });
+
+  // SALVAR LOGO E BANNER DA COMPETIÇÃO
+  $('leagueMediaForm').addEventListener('submit', async e => {
+
+    e.preventDefault();
+
+    $('leagueMediaError').textContent = '';
+
+    const button = $('saveLeagueMediaBtn');
+    button.disabled = true;
+    button.textContent = 'Salvando...';
+
+    try {
+
+      if (!isOwner) {
+        throw new Error(
+          'Somente o proprietário da competição pode alterar a capa.'
+        );
+      }
+
+      const logoFile = $('leagueLogoFile').files[0];
+      const bannerFile = $('leagueBannerFile').files[0];
+
+      let logoUrl = $('leagueLogoUrl').value.trim() || null;
+      let bannerUrl = $('leagueBannerUrl').value.trim() || null;
+
+      if (logoFile) {
+        logoUrl = await uploadImage(
+          logoFile,
+          `leagues/${league.id}/logo`
+        );
+      }
+
+      if (bannerFile) {
+        bannerUrl = await uploadImage(
+          bannerFile,
+          `leagues/${league.id}/banner`
+        );
+      }
+
+      const { data, error } = await db
+        .from('leagues')
+        .update({
+          logo_url: logoUrl,
+          banner_url: bannerUrl
+        })
+        .eq('id', league.id)
+        .eq('owner_id', user.id)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        throw new Error(
+          'A atualização não foi confirmada. Verifique a permissão de edição da competição.'
+        );
+      }
+
+      league = { ...league, ...data };
+
+      renderLeagueMedia();
+
+      closeModal('leagueMediaModal');
+      toast('Logo e banner atualizados!');
+
+    } catch (error) {
+      $('leagueMediaError').textContent =
+        error.message || 'Não foi possível salvar as imagens.';
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Salvar capa';
     }
-
-    closeModal('teamModal');
-
-    toast('Equipe cadastrada com sucesso!');
-
-    await loadTeams();
   });
 
   // ENVIAR OFERTA PARA TÉCNICO
@@ -866,7 +1189,6 @@
     }
 
     closeModal('coachModal');
-
     toast('Oferta enviada ao técnico!');
 
     await loadTeams();
@@ -901,7 +1223,6 @@
     }
 
     closeModal('endModal');
-
     toast('Nomeação encerrada. Histórico preservado.');
 
     await loadTeams();
@@ -917,30 +1238,24 @@
       });
 
       ['teams', 'offers', 'about'].forEach(tab => {
-
         $('tab-' + tab).classList.toggle(
           'hidden',
           btn.dataset.tab !== tab
         );
-
       });
     });
   });
 
   // FECHAR MODAIS
   document.querySelectorAll('.closeModal').forEach(btn => {
-
     btn.addEventListener('click', () => {
       closeModal(btn.dataset.close);
     });
-
   });
 
   // SAIR DA CONTA
   $('logoutBtn').addEventListener('click', async () => {
-
     await db.auth.signOut();
-
     location.href = 'login.html';
   });
 
