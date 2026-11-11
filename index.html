@@ -210,24 +210,49 @@
     </section>
 
 
-    <!-- CAMPEONATOS -->
-    <section id="campeonatos" class="py-20 border-t border-white/5">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+<!-- CAMPEONATOS -->
+<section id="campeonatos" class="py-20 border-t border-white/5">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-10">
-          <div>
-            <p class="text-[#25A6FF] text-xs font-black tracking-widest uppercase mb-3">Explore</p>
-            <h2 class="text-3xl sm:text-4xl font-black">Campeonatos em destaque</h2>
-            <p class="text-slate-400 mt-3 max-w-xl">
-              Descubra competições, acompanhe seus favoritos e encontre novos desafios.
-            </p>
-          </div>
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-10">
+      <div>
+        <p class="text-[#25A6FF] text-xs font-black tracking-widest uppercase mb-3">
+          Explore
+        </p>
+        <h2 class="text-3xl sm:text-4xl font-black">
+          Campeonatos em destaque
+        </h2>
+        <p class="text-slate-400 mt-3 max-w-xl">
+          Descubra competições, acompanhe seus favoritos e encontre novos desafios.
+        </p>
+      </div>
 
-          <button onclick="openModal('registerModal')"
-            class="text-[#25A6FF] font-bold text-sm hover:underline">
-            Quero participar →
-          </button>
-        </div>
+      <button onclick="openModal('registerModal')"
+        class="text-[#25A6FF] font-bold text-sm hover:underline">
+        Quero participar →
+      </button>
+    </div>
+
+    <div id="leaguesContainer"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <div class="col-span-full text-center py-12 text-slate-400">
+        <div class="animate-pulse text-[#25A6FF] text-3xl mb-3">🏆</div>
+        Carregando campeonatos...
+      </div>
+
+    </div>
+
+    <div class="text-center mt-10">
+      <p class="text-xs text-slate-500">
+        Acompanhe as competições públicas disponíveis no Liga Manager.
+      </p>
+    </div>
+
+  </div>
+</section>
+
 
         <!-- A vitrine será conectada à tabela leagues após confirmar suas colunas -->
         <div class="rounded-3xl border border-dashed border-white/15 bg-[#101827]/60 p-8 sm:p-12 text-center">
