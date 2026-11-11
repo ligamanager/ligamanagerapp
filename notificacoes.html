@@ -1,0 +1,542 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d18">
+  <title>Notificações — Liga Manager</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      background: #080d18;
+      color: #eef3ff;
+    }
+
+    .panel {
+      background: #111a2b;
+      border: 1px solid #24324a;
+    }
+
+    .muted { color: #9aabc5; }
+
+    .ghost {
+      border: 1px solid #34445f;
+      border-radius: 10px;
+      padding: 9px 13px;
+    }
+
+    .filter {
+      border: 1px solid #34445f;
+      padding: 8px 13px;
+      border-radius: 999px;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .filter.active {
+      background: #1d4ed8;
+      border-color: #3b82f6;
+      color: white;
+    }
+
+    .notification {
+      transition: background .2s, border-color .2s;
+    }
+
+    .notification.unread {
+      border-color: #31558d;
+      background: #14223a;
+    }
+
+    .notification:hover {
+      border-color: #3b82f6;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+<header class="border-b border-slate-800 bg-slate-950">
+  <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+    <a href="dashboard.html" class="text-xl font-black">
+      LIGA <span class="text-blue-500">MANAGER</span>
+    </a>
+
+    <div class="flex items-center gap-3">
+      <span id="userLabel" class="hidden sm:block text-sm muted"></span>
+      <a href="dashboard.html" class="ghost text-sm">Voltar</a>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-4xl mx-auto px-4 py-7">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <p class="text-blue-400 text-xs uppercase tracking-widest font-bold">
+        Central de comunicação
+      </p>
+
+      <h1 class="text-3xl font-black mt-1">Notificações</h1>
+
+      <p class="muted text-sm mt-2">
+        Tudo o que acontece na sua conta e no Liga Manager.
+      </p>
+    </div>
+
+    <button id="markAllBtn" class="ghost text-sm">
+      Marcar todas como lidas
+    </button>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 mb-6">
+    <div class="panel rounded-xl p-4">
+      <p class="muted text-xs">Não lidas</p>
+      <p id="unreadCount" class="text-2xl font-black mt-1">0</p>
+    </div>
+
+    <div class="panel rounded-xl p-4">
+      <p class="muted text-xs">Total recebido</p>
+      <p id="totalCount" class="text-2xl font-black mt-1">0</p>
+    </div>
+  </div>
+
+  <div class="flex gap-2 overflow-x-auto pb-3 mb-4">
+    <button class="filter active" data-filter="all">Todas</button>
+    <button class="filter" data-filter="unread">Não lidas</button>
+    <button class="filter" data-filter="coach">Contratos</button>
+    <button class="filter" data-filter="competition">Competições</button>
+    <button class="filter" data-filter="matches">Partidas</button>
+    <button class="filter" data-filter="system">Sistema</button>
+  </div>
+
+  <div id="loading" class="panel rounded-2xl p-8 text-center muted">
+    Carregando suas notificações...
+  </div>
+
+  <div id="errorBox" class="hidden panel rounded-xl p-5 text-red-300"></div>
+
+  <div id="notificationList" class="space-y-3"></div>
+
+  <div id="emptyBox" class="hidden panel rounded-2xl p-10 text-center">
+    <div class="text-4xl mb-3">🔔</div>
+    <h2 class="font-bold text-lg">Tudo tranquilo por aqui!</h2>
+    <p class="muted text-sm mt-2">
+      Quando houver novidades, elas aparecerão nesta central.
+    </p>
+  </div>
+
+  <p class="text-center muted text-xs mt-8">
+    As notificações são atualizadas automaticamente.
+  </p>
+
+</main>
+
+<div id="toast"
+     class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-sm shadow-xl">
+</div>
+
+<script>
+(() => {
+
+  const SUPABASE_URL =
+    'https://rhymsnkxlieqzdruirdc.supabase.co';
+
+  const SUPABASE_KEY =
+    'sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
+
+  const db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  const $ = id => document.getElementById(id);
+
+  let currentUser = null;
+  let notifications = [];
+  let currentFilter = 'all';
+  let loading = false;
+
+  function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[char]));
+  }
+
+  function toast(message) {
+    $('toast').textContent = message;
+    $('toast').classList.remove('hidden');
+
+    setTimeout(() => {
+      $('toast').classList.add('hidden');
+    }, 3000);
+  }
+
+  function formatDate(value) {
+    if (!value) return '';
+
+    return new Date(value).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function timeAgo(value) {
+    const seconds = Math.floor(
+      (Date.now() - new Date(value).getTime()) / 1000
+    );
+
+    if (!Number.isFinite(seconds)) return formatDate(value);
+    if (seconds < 60) return 'Agora mesmo';
+    if (seconds < 3600) return `Há ${Math.floor(seconds / 60)} min`;
+    if (seconds < 86400) return `Há ${Math.floor(seconds / 3600)} h`;
+    if (seconds < 604800) return `Há ${Math.floor(seconds / 86400)} dias`;
+
+    return formatDate(value);
+  }
+
+  function getCategory(type) {
+    const value = String(type || '').toLowerCase();
+
+    if (value.includes('coach') || value.includes('contract') ||
+        value.includes('appointment') || value.includes('offer')) {
+      return 'coach';
+    }
+
+    if (value.includes('match') || value.includes('game') ||
+        value.includes('result')) {
+      return 'matches';
+    }
+
+    if (value.includes('system') || value.includes('update') ||
+        value.includes('maintenance') || value.includes('announcement')) {
+      return 'system';
+    }
+
+    if (value.includes('league') || value.includes('team') ||
+        value.includes('request') || value.includes('competition')) {
+      return 'competition';
+    }
+
+    return 'other';
+  }
+
+  function getIcon(type) {
+    const category = getCategory(type);
+
+    return {
+      coach: '📝',
+      matches: '⚽',
+      competition: '🏆',
+      system: '⚙️',
+      other: '🔔'
+    }[category];
+  }
+
+  function getCategoryName(type) {
+    const category = getCategory(type);
+
+    return {
+      coach: 'Contrato',
+      matches: 'Partida',
+      competition: 'Competição',
+      system: 'Sistema',
+      other: 'Aviso'
+    }[category];
+  }
+
+  async function loadNotifications(showLoading = false) {
+    if (loading) return;
+
+    loading = true;
+
+    if (showLoading) {
+      $('loading').classList.remove('hidden');
+    }
+
+    $('errorBox').classList.add('hidden');
+
+    const { data, error } = await db
+      .from('notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    loading = false;
+    $('loading').classList.add('hidden');
+
+    if (error) {
+      $('errorBox').textContent =
+        'Erro ao carregar notificações: ' + error.message;
+      $('errorBox').classList.remove('hidden');
+      return;
+    }
+
+    notifications = data || [];
+
+    render();
+  }
+
+  function render() {
+
+    const unread = notifications.filter(n => !n.is_read).length;
+
+    $('unreadCount').textContent = unread;
+    $('totalCount').textContent = notifications.length;
+
+    const filtered = notifications.filter(n => {
+
+      if (currentFilter === 'all') return true;
+      if (currentFilter === 'unread') return !n.is_read;
+
+      return getCategory(n.type) === currentFilter;
+    });
+
+    $('notificationList').innerHTML = '';
+
+    $('emptyBox').classList.toggle(
+      'hidden',
+      filtered.length !== 0
+    );
+
+    if (filtered.length === 0 && currentFilter !== 'all') {
+      $('emptyBox').querySelector('h2').textContent =
+        'Nenhuma notificação encontrada';
+
+      $('emptyBox').querySelector('p').textContent =
+        'Não há notificações nesta categoria.';
+    } else {
+      $('emptyBox').querySelector('h2').textContent =
+        'Tudo tranquilo por aqui!';
+
+      $('emptyBox').querySelector('p').textContent =
+        'Quando houver novidades, elas aparecerão nesta central.';
+    }
+
+    filtered.forEach(notification => {
+
+      const card = document.createElement('article');
+
+      card.className =
+        'notification panel rounded-2xl p-4 ' +
+        (!notification.is_read ? 'unread' : '');
+
+      const category = getCategoryName(notification.type);
+
+      card.innerHTML = `
+        <div class="flex gap-3 items-start">
+
+          <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-2xl shrink-0">
+            ${getIcon(notification.type)}
+          </div>
+
+          <div class="flex-1 min-w-0">
+
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs uppercase tracking-wider text-blue-300 font-bold">
+                ${escapeHTML(category)}
+              </span>
+
+              ${!notification.is_read
+                ? '<span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full">Não lida</span>'
+                : ''}
+            </div>
+
+            <h3 class="font-bold mt-1 break-words">
+              ${escapeHTML(notification.title)}
+            </h3>
+
+            <p class="muted text-sm mt-1 whitespace-pre-wrap break-words">
+              ${escapeHTML(notification.message)}
+            </p>
+
+            <p class="text-xs muted mt-3">
+              ${escapeHTML(timeAgo(notification.created_at))}
+            </p>
+
+            <div class="flex flex-wrap gap-2 mt-3">
+
+              ${notification.league_id
+                ? `<button class="text-sm text-blue-400 hover:underline"
+                     data-open="${escapeHTML(notification.id)}">
+                     Abrir competição →
+                   </button>`
+                : ''}
+
+              ${!notification.is_read
+                ? `<button class="text-sm muted hover:text-white"
+                     data-read="${escapeHTML(notification.id)}">
+                     Marcar como lida
+                   </button>`
+                : ''}
+
+            </div>
+          </div>
+        </div>
+      `;
+
+      $('notificationList').appendChild(card);
+    });
+
+    document.querySelectorAll('[data-read]').forEach(button => {
+      button.addEventListener('click', () => {
+        markAsRead(button.dataset.read);
+      });
+    });
+
+    document.querySelectorAll('[data-open]').forEach(button => {
+      button.addEventListener('click', () => {
+        openRelated(button.dataset.open);
+      });
+    });
+  }
+
+  async function markAsRead(id) {
+
+    const { error } = await db
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', id)
+      .eq('user_id', currentUser.id);
+
+    if (error) {
+      toast('Não foi possível marcar como lida.');
+      return;
+    }
+
+    const item = notifications.find(n => n.id === id);
+
+    if (item) item.is_read = true;
+
+    render();
+  }
+
+  async function markAllAsRead() {
+
+    const unread = notifications.filter(n => !n.is_read);
+
+    if (!unread.length) {
+      toast('Você já leu todas as notificações.');
+      return;
+    }
+
+    const { error } = await db
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', currentUser.id)
+      .eq('is_read', false);
+
+    if (error) {
+      toast('Não foi possível atualizar as notificações.');
+      return;
+    }
+
+    notifications.forEach(n => {
+      n.is_read = true;
+    });
+
+    render();
+    toast('Todas as notificações foram marcadas como lidas.');
+  }
+
+  async function openRelated(id) {
+
+    const notification = notifications.find(n => n.id === id);
+
+    if (!notification) return;
+
+    if (!notification.is_read) {
+      await markAsRead(id);
+    }
+
+    if (notification.league_id) {
+      location.href =
+        'liga.html?id=' + encodeURIComponent(notification.league_id);
+    } else {
+      toast('Esta notificação não possui um destino vinculado.');
+    }
+  }
+
+  function setupFilters() {
+
+    document.querySelectorAll('[data-filter]').forEach(button => {
+
+      button.addEventListener('click', () => {
+
+        currentFilter = button.dataset.filter;
+
+        document.querySelectorAll('[data-filter]').forEach(item => {
+          item.classList.toggle('active', item === button);
+        });
+
+        render();
+      });
+    });
+  }
+
+  async function init() {
+
+    const {
+      data: { user },
+      error
+    } = await db.auth.getUser();
+
+    if (error || !user) {
+      location.href = 'login.html';
+      return;
+    }
+
+    currentUser = user;
+
+    const { data: profile } = await db
+      .from('profiles')
+      .select('username')
+      .eq('id', currentUser.id)
+      .maybeSingle();
+
+    $('userLabel').textContent =
+      profile?.username ? '@' + profile.username : '';
+
+    setupFilters();
+
+    $('markAllBtn').addEventListener('click', markAllAsRead);
+
+    await loadNotifications(true);
+
+    // Atualização automática periódica.
+    setInterval(() => {
+      loadNotifications(false);
+    }, 30000);
+
+    // Atualização quando o usuário retorna à página.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        loadNotifications(false);
+      }
+    });
+  }
+
+  init().catch(error => {
+    $('loading').classList.add('hidden');
+    $('errorBox').textContent =
+      error.message || 'Erro inesperado ao iniciar a central.';
+    $('errorBox').classList.remove('hidden');
+  });
+
+})();
+</script>
+
+</body>
+</html>
