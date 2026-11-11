@@ -464,4 +464,303 @@
 
 
   <!-- MODAL LOGIN -->
-  <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blu
+  <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-[#101827] border border-white/10 rounded-3xl p-7 sm:p-8 w-full max-w-md shadow-2xl relative">
+
+      <button type="button" onclick="closeModal('loginModal')"
+        class="absolute top-4 right-5 text-slate-400 hover:text-white text-2xl">×</button>
+
+      <div class="text-center mb-7">
+        <div class="w-12 h-12 mx-auto rounded-xl bg-[#25A6FF] text-[#06111F] flex items-center justify-center text-xl font-black">L</div>
+        <h2 class="text-2xl font-black mt-4">Bem-vindo de volta!</h2>
+        <p class="text-xs text-slate-400 mt-2">Entre na sua conta do Liga Manager.</p>
+      </div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label for="loginEmail" class="block text-xs font-bold text-slate-300 mb-2">E-MAIL</label>
+          <input type="email" id="loginEmail" autocomplete="email" required
+            placeholder="seu@email.com"
+            class="w-full px-4 py-3.5 rounded-xl bg-[#070B14] border border-white/10 text-white text-sm outline-none focus:border-[#25A6FF]">
+        </div>
+
+        <div>
+          <label for="loginPassword" class="block text-xs font-bold text-slate-300 mb-2">SENHA</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" required
+            placeholder="Sua senha"
+            class="w-full px-4 py-3.5 rounded-xl bg-[#070B14] border border-white/10 text-white text-sm outline-none focus:border-[#25A6FF]">
+        </div>
+
+        <button type="submit" id="btnLoginSubmit"
+          class="w-full py-4 rounded-xl bg-[#25A6FF] text-[#06111F] font-black hover:bg-[#168DE0] transition">
+          Entrar na plataforma
+        </button>
+      </form>
+
+      <div id="loginMsg" role="status" aria-live="polite" class="mt-4 text-center text-xs font-semibold min-h-5"></div>
+
+      <p class="text-center text-xs text-slate-400 mt-5">
+        Ainda não tem conta?
+        <button type="button" onclick="switchModal('loginModal','registerModal')" class="text-[#25A6FF] font-bold hover:underline">Cadastre-se</button>
+      </p>
+
+    </div>
+  </div>
+
+
+  <!-- MODAL CADASTRO -->
+  <div id="registerModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-[#101827] border border-white/10 rounded-3xl p-7 sm:p-8 w-full max-w-md shadow-2xl relative">
+
+      <button type="button" onclick="closeModal('registerModal')"
+        class="absolute top-4 right-5 text-slate-400 hover:text-white text-2xl">×</button>
+
+      <div class="text-center mb-7">
+        <div class="w-12 h-12 mx-auto rounded-xl bg-[#25A6FF] text-[#06111F] flex items-center justify-center text-xl font-black">L</div>
+        <h2 class="text-2xl font-black mt-4">Crie sua conta</h2>
+        <p class="text-xs text-slate-400 mt-2">Faça parte da comunidade Liga Manager.</p>
+      </div>
+
+      <form id="registerForm" class="space-y-4">
+        <div>
+          <label for="regUsername" class="block text-xs font-bold text-slate-300 mb-2">NOME DE USUÁRIO</label>
+          <input type="text" id="regUsername" autocomplete="username" required minlength="3" maxlength="24"
+            placeholder="seu_usuario"
+            class="w-full px-4 py-3.5 rounded-xl bg-[#070B14] border border-white/10 text-white text-sm outline-none focus:border-[#25A6FF]">
+        </div>
+
+        <div>
+          <label for="regEmail" class="block text-xs font-bold text-slate-300 mb-2">E-MAIL</label>
+          <input type="email" id="regEmail" autocomplete="email" required
+            placeholder="seu@email.com"
+            class="w-full px-4 py-3.5 rounded-xl bg-[#070B14] border border-white/10 text-white text-sm outline-none focus:border-[#25A6FF]">
+        </div>
+
+        <div>
+          <label for="regPassword" class="block text-xs font-bold text-slate-300 mb-2">SENHA</label>
+          <input type="password" id="regPassword" autocomplete="new-password" required minlength="6"
+            placeholder="Crie uma senha com pelo menos 6 caracteres"
+            class="w-full px-4 py-3.5 rounded-xl bg-[#070B14] border border-white/10 text-white text-sm outline-none focus:border-[#25A6FF]">
+        </div>
+
+        <button type="submit" id="btnRegisterSubmit"
+          class="w-full py-4 rounded-xl bg-[#25A6FF] text-[#06111F] font-black hover:bg-[#168DE0] transition">
+          Criar minha conta
+        </button>
+      </form>
+
+      <div id="registerMsg" role="status" aria-live="polite" class="mt-4 text-center text-xs font-semibold min-h-5"></div>
+
+      <p class="text-center text-xs text-slate-400 mt-5">
+        Já possui conta?
+        <button type="button" onclick="switchModal('registerModal','loginModal')" class="text-[#25A6FF] font-bold hover:underline">Fazer login</button>
+      </p>
+
+    </div>
+  </div>
+
+
+  <!-- SUPABASE E AUTENTICAÇÃO -->
+  <script>
+    // CONEXÃO SUPABASE
+    const SUPABASE_URL = 'https://rhymsnkxlieqzdruirdc.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_L-7M9lSNjwLepf5uo8m2YQ_5ZW2J-Bl';
+
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+
+    // SESSÃO EXISTENTE
+    async function checkExistingSession() {
+      try {
+        const { data, error } = await supabaseClient.auth.getSession();
+
+        if (error) throw error;
+
+        if (data.session) {
+          window.location.replace('dashboard.html');
+        }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
+      }
+    }
+
+    checkExistingSession();
+
+
+    // MODAIS
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.classList.add('modal-open');
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+
+      modal.classList.remove('flex');
+      modal.classList.add('hidden');
+
+      const anotherOpen = ['loginModal', 'registerModal'].some(modalId => {
+        return !document.getElementById(modalId).classList.contains('hidden');
+      });
+
+      if (!anotherOpen) {
+        document.body.classList.remove('modal-open');
+      }
+    }
+
+    function switchModal(fromId, toId) {
+      closeModal(fromId);
+      openModal(toId);
+    }
+
+    window.addEventListener('click', function(event) {
+      ['loginModal', 'registerModal'].forEach(id => {
+        const modal = document.getElementById(id);
+        if (event.target === modal) closeModal(id);
+      });
+    });
+
+    window.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeModal('loginModal');
+        closeModal('registerModal');
+      }
+    });
+
+
+    // MENSAGENS
+    function showMessage(element, message, type) {
+      element.textContent = message;
+
+      const colors = {
+        success: 'text-emerald-400',
+        error: 'text-red-400',
+        info: 'text-[#25A6FF]'
+      };
+
+      element.className = 'mt-4 text-center text-xs font-semibold min-h-5 ' + colors[type];
+    }
+
+
+    // LOGIN
+    document.getElementById('loginForm').addEventListener('submit', async function(event) {
+      event.preventDefault();
+
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const msg = document.getElementById('loginMsg');
+      const btn = document.getElementById('btnLoginSubmit');
+
+      btn.disabled = true;
+      btn.textContent = 'Entrando...';
+      showMessage(msg, 'Verificando seus dados...', 'info');
+
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) throw error;
+
+        if (!data.session) {
+          throw new Error('Não foi possível iniciar sua sessão. Tente novamente.');
+        }
+
+        showMessage(msg, 'Login realizado! Redirecionando...', 'success');
+
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 700);
+
+      } catch (error) {
+        console.error('Erro no login:', error);
+        showMessage(msg, 'Não foi possível entrar. Verifique seu e-mail e senha.', 'error');
+
+        btn.disabled = false;
+        btn.textContent = 'Entrar na plataforma';
+      }
+    });
+
+
+    // CADASTRO
+    document.getElementById('registerForm').addEventListener('submit', async function(event) {
+      event.preventDefault();
+
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const msg = document.getElementById('registerMsg');
+      const btn = document.getElementById('btnRegisterSubmit');
+
+      if (username.length < 3) {
+        showMessage(msg, 'O nome de usuário precisa ter pelo menos 3 caracteres.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Criando conta...';
+      showMessage(msg, 'Preparando seu cadastro...', 'info');
+
+      try {
+        const { data, error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              username: username
+            }
+          }
+        });
+
+        if (error) throw error;
+
+        // Se a confirmação de e-mail estiver desativada,
+        // o Supabase normalmente retorna uma sessão.
+        if (data.session) {
+          showMessage(msg, 'Conta criada! Entrando na plataforma...', 'success');
+
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 900);
+
+          return;
+        }
+
+        // Se a confirmação estiver ativada, não redirecionar sem sessão.
+        showMessage(
+          msg,
+          'Cadastro iniciado! Verifique seu e-mail para confirmar a conta antes de entrar.',
+          'success'
+        );
+
+        btn.disabled = false;
+        btn.textContent = 'Criar minha conta';
+
+      } catch (error) {
+        console.error('Erro no cadastro:', error);
+
+        let message = 'Não foi possível realizar o cadastro. Tente novamente.';
+
+        if (error.message && error.message.toLowerCase().includes('rate limit')) {
+          message = 'Limite de envio de e-mails atingido. Aguarde alguns minutos e tente novamente.';
+        } else if (error.message && error.message.toLowerCase().includes('already registered')) {
+          message = 'Este e-mail já possui cadastro. Tente fazer login.';
+        }
+
+        showMessage(msg, message, 'error');
+
+        btn.disabled = false;
+        btn.textContent = 'Criar minha conta';
+      }
+    });
+  </script>
+
+</body>
+</html>
